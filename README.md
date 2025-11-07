@@ -1,5 +1,5 @@
 local og1, og2, og3, og4 = "Normal Punch", "Consecutive Punches", "Shove", "Uppercut"
-local mn1, mn2, mn3, mn4 = "Black Flash", "Divergent Dam Combo", "Divergent Punch", "Black Flash is expelled"
+local mn1, mn2, mn3, mn4 = "Black Flash", "Divergent Dam Combo", "Black Flash is expelled", "Divergent Punch"
 local ultOG1, ultOG2, ultOG3, ultOG4 = "Death Counter", "Table Flip", "Serious Punch", "Omni Directional Punch"
 local ult1, ult2, ult3, ult4 = "?", "?", "?", "?"
 
