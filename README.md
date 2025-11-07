@@ -31,7 +31,7 @@ local ATTACK_CONFIG = {
     },
     ["Uppercut"] = {
         newName = "Divergent Punch",
-        animationId = nil,
+        animationId = 18179181663,
         speed = 1,
         timePos = 0,
         soundId = nil,
@@ -42,8 +42,10 @@ local ATTACK_CONFIG = {
 }
 
 local ANIMATION_REPLACEMENTS = {
+    [10468665991] = "Normal Punch",
     [10466974800] = "Consecutive Punches",
     [10471336737] = "Shove",
+    [10469597735] = "Uppercut",
     [12510170988] = {animationId = 18897119503, speed = 1},
     [11343318134] = {animationId = 18450698238, speed = 1},
     [11365563255] = {animationId = 17861840167, speed = 0.3},
