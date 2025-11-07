@@ -41,22 +41,6 @@ local ATTACK_CONFIG = {
     }
 }
 
-local ANIMATION_REPLACEMENTS = {
-    [10468665991] = "Normal Punch",
-    [10466974800] = "Consecutive Punches",
-    [10471336737] = "Shove",
-    [12510170988] = {animationId = 18897119503, speed = 1},
-    [11343318134] = {animationId = 18450698238, speed = 1},
-    [11365563255] = {animationId = 17861840167, speed = 0.3},
-    [13927612951] = {animationId = 18459220516, speed = 1},
-    [15955393872] = {animationId = 18459220516, speed = 1},
-    [12983333733] = {animationId = 120001337057214, speed = 0.55},
-    [12447707844] = {animationId = 106128760138039, speed = 1},
-    [10479335397] = {animationId = 132259592388175, speed = 1},
-    [10503381238] = {animationId = 14900168720, speed = 1},
-    [10470104242] = {animationId = 17858997926, speed = 1.1}
-}
-
 local fontConfig = {
     Enabled = true,
     Font = Enum.Font.Sarpanch,
@@ -70,17 +54,17 @@ local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 
 local t1 = {
-    ["1"] = {original = og1, new = mn1},
-    ["2"] = {original = og2, new = mn2},
-    ["3"] = {original = og3, new = mn3},
-    ["4"] = {original = og4, new = mn4}
+    ["1"] = {original = "Normal Punch", new = "Black Flash"},
+    ["2"] = {original = "Consecutive Punches", new = "Divergent Dam Combo"},
+    ["3"] = {original = "Shove", new = "Black Flash is expelled"},
+    ["4"] = {original = "Uppercut", new = "Divergent Punch"}
 }
 
 local t2 = {
-    ["1"] = {original = ultOG1, new = ult1},
-    ["2"] = {original = ultOG2, new = ult2},
-    ["3"] = {original = ultOG3, new = ult3},
-    ["4"] = {original = ultOG4, new = ult4}
+    ["1"] = {original = "Ultimate 1", new = "Domain Expansion"},
+    ["2"] = {original = "Ultimate 2", new = "Malevolent Shrine"},
+    ["3"] = {original = "Ultimate 3", new = "Infinite Void"},
+    ["4"] = {original = "Ultimate 4", new = "Maximum Technique"}
 }
 
 local function applyFont(label)
@@ -97,7 +81,13 @@ end
 
 local function addCursedFireTo(buttonBase)
     removeCursedFireFrom(buttonBase)
-    local kj = playerGui.Hotbar.Backpack.LocalScript:FindFirstChild("Flipbook")
+    local hotbar = playerGui:FindFirstChild("Hotbar")
+    if not hotbar then return end
+    local backpack = hotbar:FindFirstChild("Backpack")
+    if not backpack then return end
+    local localScript = backpack:FindFirstChild("LocalScript")
+    if not localScript then return end
+    local kj = localScript:FindFirstChild("Flipbook")
     if kj then
         local clone = kj:Clone()
         local group = Instance.new("Folder")
@@ -153,51 +143,25 @@ local function setupClickHandlers()
     end
 end
 
-local function N1()
-    while character.Humanoid.Health > 0 do
+local function updateToolNames(toolTable)
+    while character and character.Humanoid and character.Humanoid.Health > 0 do
         local hotbar = playerGui:FindFirstChild("Hotbar")
         if hotbar then
             local backpack = hotbar:FindFirstChild("Backpack")
             if backpack then
                 local hotbarFrame = backpack:FindFirstChild("Hotbar")
                 if hotbarFrame then
-                    for buttonName, toolData in pairs(t1) do
+                    for buttonName, toolData in pairs(toolTable) do
                         local baseButton = hotbarFrame:FindFirstChild(buttonName)
                         baseButton = baseButton and baseButton:FindFirstChild("Base")
                         if baseButton then
                             local toolName = baseButton:FindFirstChild("ToolName")
-                            if toolName and toolName.Text == toolData.original then
-                                toolName.Text = toolData.new
-                                applyFont(toolName)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        task.wait(0.1)
-    end
-end
-
-local function N2()
-    while character.Humanoid.Health > 0 do
-        local hotbar = playerGui:FindFirstChild("Hotbar")
-        if hotbar then
-            local backpack = hotbar:FindFirstChild("Backpack")
-            if backpack then
-                local hotbarFrame = backpack:FindFirstChild("Hotbar")
-                if hotbarFrame then
-                    for buttonName, toolData in pairs(t2) do
-                        local baseButton = hotbarFrame:FindFirstChild(buttonName)
-                        baseButton = baseButton and baseButton:FindFirstChild("Base")
-                        if baseButton then
-                            local toolName = baseButton:FindFirstChild("ToolName")
-                            if toolName then
+                            if toolName and toolName:IsA("TextLabel") then
                                 if toolName.Text == toolData.original then
                                     toolName.Text = toolData.new
                                     applyFont(toolName)
                                 end
-                                if toolName.Text == "Do not change here" then
+                                if toolName.Text == "Cursed Strike" then
                                     addCursedFireTo(baseButton)
                                 else
                                     removeCursedFireFrom(baseButton)
@@ -606,11 +570,15 @@ player.CharacterAdded:Connect(function(newCharacter)
     humanoidRootPart = character:WaitForChild("HumanoidRootPart")
     character.DescendantAdded:Connect(onBodyVelocityAdded)
     for _, descendant in pairs(character:GetDescendants()) do onBodyVelocityAdded(descendant) end
+    
+    setupClickHandlers()
+    coroutine.wrap(function() updateToolNames(t1) end)()
+    coroutine.wrap(function() updateToolNames(t2) end)()
 end)
 
 setupClickHandlers()
-coroutine.wrap(N1)()
-coroutine.wrap(N2)()
+coroutine.wrap(function() updateToolNames(t1) end)()
+coroutine.wrap(function() updateToolNames(t2) end)()
 
 task.wait(1)
 showWelcomeMessage()
