@@ -163,7 +163,7 @@ setupClickHandlers()
 coroutine.wrap(N1)()
 coroutine.wrap(N2)()
 
-local function bindReplacement(animationId, replacementId, speed, timePos)
+local function bindReplacement(animationId, replacementId, speed, timePos, soundId)
     local player = game.Players.LocalPlayer
     local character = player.Character or player.CharacterAdded:Wait()
     local humanoid = character:WaitForChild("Humanoid")
@@ -178,11 +178,24 @@ local function bindReplacement(animationId, replacementId, speed, timePos)
             Anim:AdjustSpeed(0)
             Anim.TimePosition = timePos or 0
             Anim:AdjustSpeed(speed or 1)
+            
+            -- Toca o som se fornecido
+            if soundId then
+                local hrp = character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    local sound = Instance.new("Sound")
+                    sound.SoundId = "rbxassetid://" .. soundId
+                    sound.Volume = 1
+                    sound.Parent = hrp
+                    sound:Play()
+                    game.Debris:AddItem(sound, 5)
+                end
+            end
         end
     end)
 end
 
-bindReplacement(10468665991, 17186602996, 1)
+bindReplacement(10468665991, 17186602996, 1, nil, 75307432501177)
 bindReplacement(10466974800, 13560306510, 3)
 bindReplacement(10471336737, 18249294373, 1)
 bindReplacement(12510170988, 18897119503, 1)
