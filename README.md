@@ -1,7 +1,7 @@
 local ATTACK_CONFIG = {
     ["Normal Punch"] = {
         newName = "Black Flash",
-        animationId = 15955393872,
+        animationId = 17186602996,
         speed = 1,
         timePos = 0,
         soundId = 75307432501177,
@@ -41,6 +41,31 @@ local ATTACK_CONFIG = {
     }
 }
 
+local ANIMATION_REPLACEMENTS = {
+    [10468665991] = {animationId = 17186602996, speed = 1, soundId = 75307432501177, useFOV = true, useRedLight = true, useBlackFlashText = true, priority = Enum.AnimationPriority.Action4},
+    [10466974800] = {animationId = 13560306510, speed = 3, priority = Enum.AnimationPriority.Action3},
+    [10471336737] = {animationId = 18179181663, speed = 1, useFOV = true, priority = Enum.AnimationPriority.Action4},
+    [12510170988] = {animationId = 18897119503, speed = 1, priority = Enum.AnimationPriority.Action2},
+    [11343318134] = {animationId = 18450698238, speed = 1, priority = Enum.AnimationPriority.Action2},
+    [11365563255] = {animationId = 17861840167, speed = 0.3, priority = Enum.AnimationPriority.Action3},
+    [13927612951] = {animationId = 18459220516, speed = 1, priority = Enum.AnimationPriority.Action2},
+    [15955393872] = {animationId = 18459220516, speed = 1, priority = Enum.AnimationPriority.Action2},
+    [12983333733] = {animationId = 120001337057214, speed = 0.55, priority = Enum.AnimationPriority.Action3},
+    [12447707844] = {animationId = 106128760138039, speed = 1, priority = Enum.AnimationPriority.Action2},
+    [10479335397] = {animationId = 132259592388175, speed = 1, priority = Enum.AnimationPriority.Action2},
+    [10503381238] = {animationId = 14900168720, speed = 1, priority = Enum.AnimationPriority.Action2},
+    [10470104242] = {animationId = 17858997926, speed = 1.1, priority = Enum.AnimationPriority.Action2}
+}
+
+local REPLACEMENT_ANIMATIONS = {
+    [10469493270] = {id = "rbxassetid://13491635433", priority = Enum.AnimationPriority.Action3, fadeTime = 0.1},
+    [10469630950] = {id = "rbxassetid://13532600125", priority = Enum.AnimationPriority.Action3, fadeTime = 0.1},
+    [10469639222] = {id = "rbxassetid://104895379416342", priority = Enum.AnimationPriority.Action4, fadeTime = 0.15},
+    [10469643643] = {id = "rbxassetid://18181348446", priority = Enum.AnimationPriority.Action3, fadeTime = 0.1},
+    [17859015788] = {id = "rbxassetid://12684185971", priority = Enum.AnimationPriority.Action2, fadeTime = 0.1},
+    [11365563255] = {id = "rbxassetid://14516273501", priority = Enum.AnimationPriority.Action3, fadeTime = 0.1}
+}
+
 local fontConfig = {
     Enabled = true,
     Font = Enum.Font.Sarpanch,
@@ -52,20 +77,173 @@ local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local animationCache = {}
+local activeAnimations = {}
+local animationQueue = {}
+local isProcessingQueue = false
+local currentPlayingTracks = {}
 
 local t1 = {
-    ["1"] = {original = "Normal Punch", new = "Black Flash"},
-    ["2"] = {original = "Consecutive Punches", new = "Divergent Dam Combo"},
-    ["3"] = {original = "Shove", new = "Black Flash is expelled"},
-    ["4"] = {original = "Uppercut", new = "Divergent Punch"}
+    ["1"] = {original = og1, new = mn1},
+    ["2"] = {original = og2, new = mn2},
+    ["3"] = {original = og3, new = mn3},
+    ["4"] = {original = og4, new = mn4}
 }
 
 local t2 = {
-    ["1"] = {original = "Ultimate 1", new = "Domain Expansion"},
-    ["2"] = {original = "Ultimate 2", new = "Malevolent Shrine"},
-    ["3"] = {original = "Ultimate 3", new = "Infinite Void"},
-    ["4"] = {original = "Ultimate 4", new = "Maximum Technique"}
+    ["1"] = {original = ultOG1, new = ult1},
+    ["2"] = {original = ultOG2, new = ult2},
+    ["3"] = {original = ultOG3, new = ult3},
+    ["4"] = {original = ultOG4, new = ult4}
 }
+
+local function preloadAnimation(animationId)
+    if not animationCache[animationId] then
+        local anim = Instance.new("Animation")
+        anim.AnimationId = "rbxassetid://" .. animationId
+        animationCache[animationId] = humanoid:LoadAnimation(anim)
+    end
+    return animationCache[animationId]
+end
+
+local function preloadAllAnimations()
+    for _, config in pairs(ANIMATION_REPLACEMENTS) do
+        if config.animationId then
+            preloadAnimation(config.animationId)
+        end
+    end
+    for _, config in pairs(REPLACEMENT_ANIMATIONS) do
+        local animId = config.id:match("%d+")
+        if animId then
+            preloadAnimation(tonumber(animId))
+        end
+    end
+end
+
+local function stopAllAnimationsSmooth(fadeTime)
+    fadeTime = fadeTime or 0.1
+    for track, _ in pairs(currentPlayingTracks) do
+        if track.IsPlaying then
+            track:Stop(fadeTime)
+        end
+        currentPlayingTracks[track] = nil
+    end
+end
+
+local function stopSpecificAnimation(animationId, fadeTime)
+    fadeTime = fadeTime or 0.1
+    for track, id in pairs(currentPlayingTracks) do
+        if id == animationId and track.IsPlaying then
+            track:Stop(fadeTime)
+            currentPlayingTracks[track] = nil
+        end
+    end
+end
+
+local function playAnimationAdvanced(animationId, config)
+    local track = preloadAnimation(animationId)
+    if not track then return nil end
+    
+    if config.priority then
+        track.Priority = config.priority
+    end
+    
+    local fadeTime = config.fadeTime or 0.1
+    track:Play(fadeTime)
+    
+    if config.speed then
+        track:AdjustSpeed(0)
+        track.TimePosition = config.timePos or 0
+        track:AdjustSpeed(config.speed)
+    end
+    
+    currentPlayingTracks[track] = animationId
+    
+    track.Stopped:Connect(function()
+        currentPlayingTracks[track] = nil
+    end)
+    
+    return track
+end
+
+local function createSmoothFOVEffect(duration, intensity)
+    local camera = workspace.CurrentCamera
+    local originalFOV = camera.FieldOfView
+    
+    local fovIn = TweenService:Create(
+        camera,
+        TweenInfo.new(duration * 0.3, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
+        {FieldOfView = originalFOV + intensity}
+    )
+    
+    local fovOut = TweenService:Create(
+        camera,
+        TweenInfo.new(duration * 0.7, Enum.EasingStyle.Cubic, Enum.EasingDirection.In),
+        {FieldOfView = originalFOV}
+    )
+    
+    fovIn:Play()
+    fovIn.Completed:Connect(function()
+        fovOut:Play()
+    end)
+end
+
+local function createEnhancedRedLight(duration)
+    local Lighting = game:GetService("Lighting")
+    
+    local originalAmbient = Lighting.Ambient
+    local originalBrightness = Lighting.Brightness
+    local originalColorShift_Top = Lighting.ColorShift_Top
+    
+    local lightIn = TweenService:Create(
+        Lighting,
+        TweenInfo.new(duration * 0.4, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
+        {
+            Ambient = Color3.new(0.5, 0.05, 0.05),
+            Brightness = 1.2,
+            ColorShift_Top = Color3.new(0.3, 0, 0)
+        }
+    )
+    
+    local lightOut = TweenService:Create(
+        Lighting,
+        TweenInfo.new(duration * 0.6, Enum.EasingStyle.Cubic, Enum.EasingDirection.In),
+        {
+            Ambient = originalAmbient,
+            Brightness = originalBrightness,
+            ColorShift_Top = originalColorShift_Top
+        }
+    )
+    
+    lightIn:Play()
+    lightIn.Completed:Connect(function()
+        lightOut:Play()
+    end)
+end
+
+local function playSoundWithFade(soundId, volume, fadeInTime)
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://" .. soundId
+    sound.Volume = 0
+    sound.Parent = hrp
+    sound:Play()
+    
+    local fadeTween = TweenService:Create(
+        sound,
+        TweenInfo.new(fadeInTime or 0.1, Enum.EasingStyle.Linear),
+        {Volume = volume or 1}
+    )
+    fadeTween:Play()
+    
+    game.Debris:AddItem(sound, 5)
+    return sound
+end
 
 local function applyFont(label)
     if fontConfig.Enabled and label:IsA("TextLabel") then
@@ -81,13 +259,7 @@ end
 
 local function addCursedFireTo(buttonBase)
     removeCursedFireFrom(buttonBase)
-    local hotbar = playerGui:FindFirstChild("Hotbar")
-    if not hotbar then return end
-    local backpack = hotbar:FindFirstChild("Backpack")
-    if not backpack then return end
-    local localScript = backpack:FindFirstChild("LocalScript")
-    if not localScript then return end
-    local kj = localScript:FindFirstChild("Flipbook")
+    local kj = playerGui.Hotbar.Backpack.LocalScript:FindFirstChild("Flipbook")
     if kj then
         local clone = kj:Clone()
         local group = Instance.new("Folder")
@@ -143,25 +315,51 @@ local function setupClickHandlers()
     end
 end
 
-local function updateToolNames(toolTable)
-    while character and character.Humanoid and character.Humanoid.Health > 0 do
+local function N1()
+    while character.Humanoid.Health > 0 do
         local hotbar = playerGui:FindFirstChild("Hotbar")
         if hotbar then
             local backpack = hotbar:FindFirstChild("Backpack")
             if backpack then
                 local hotbarFrame = backpack:FindFirstChild("Hotbar")
                 if hotbarFrame then
-                    for buttonName, toolData in pairs(toolTable) do
+                    for buttonName, toolData in pairs(t1) do
                         local baseButton = hotbarFrame:FindFirstChild(buttonName)
                         baseButton = baseButton and baseButton:FindFirstChild("Base")
                         if baseButton then
                             local toolName = baseButton:FindFirstChild("ToolName")
-                            if toolName and toolName:IsA("TextLabel") then
+                            if toolName and toolName.Text == toolData.original then
+                                toolName.Text = toolData.new
+                                applyFont(toolName)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(0.1)
+    end
+end
+
+local function N2()
+    while character.Humanoid.Health > 0 do
+        local hotbar = playerGui:FindFirstChild("Hotbar")
+        if hotbar then
+            local backpack = hotbar:FindFirstChild("Backpack")
+            if backpack then
+                local hotbarFrame = backpack:FindFirstChild("Hotbar")
+                if hotbarFrame then
+                    for buttonName, toolData in pairs(t2) do
+                        local baseButton = hotbarFrame:FindFirstChild(buttonName)
+                        baseButton = baseButton and baseButton:FindFirstChild("Base")
+                        if baseButton then
+                            local toolName = baseButton:FindFirstChild("ToolName")
+                            if toolName then
                                 if toolName.Text == toolData.original then
                                     toolName.Text = toolData.new
                                     applyFont(toolName)
                                 end
-                                if toolName.Text == "Cursed Strike" then
+                                if toolName.Text == "Do not change here" then
                                     addCursedFireTo(baseButton)
                                 else
                                     removeCursedFireFrom(baseButton)
@@ -229,14 +427,14 @@ local function createBlackFlashNotification()
     local origSize = message.TextSize
     message.TextSize = 0
     
-    local tweenIn = game:GetService("TweenService"):Create(
+    local tweenIn = TweenService:Create(
         message,
         TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
         {TextSize = origSize}
     )
     tweenIn:Play()
     
-    local pulseTween = game:GetService("TweenService"):Create(
+    local pulseTween = TweenService:Create(
         stroke,
         TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
         {Transparency = 0.5}
@@ -247,7 +445,7 @@ local function createBlackFlashNotification()
     
     pulseTween:Cancel()
     
-    local tweenOut = game:GetService("TweenService"):Create(
+    local tweenOut = TweenService:Create(
         message,
         TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.In),
         {TextSize = 0}
@@ -309,8 +507,6 @@ local function showWelcomeMessage()
         
         table.insert(particles, particle)
     end
-    
-    local TweenService = game:GetService("TweenService")
     
     for _, particle in ipairs(particles) do
         local angle = math.rad(math.random(0, 360))
@@ -389,169 +585,76 @@ local function showWelcomeMessage()
     screenGui:Destroy()
 end
 
-local function bindReplacement(animationId, replacementId, speed, timePos, soundId, useFOV, useRedLight, useBlackFlashText)
-    humanoid.AnimationPlayed:Connect(function(animationTrack)
-        if animationTrack.Animation.AnimationId == "rbxassetid://" .. animationId then
-            task.wait()
-            
-            for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-                if track.Animation.AnimationId == "rbxassetid://" .. animationId then
-                    track:Stop()
-                end
-            end
-            
-            local AnimAnim = Instance.new("Animation")
-            AnimAnim.AnimationId = "rbxassetid://" .. replacementId
-            local Anim = humanoid:LoadAnimation(AnimAnim)
-            Anim:Play()
-            Anim:AdjustSpeed(0)
-            Anim.TimePosition = timePos or 0
-            Anim:AdjustSpeed(speed or 1)
-            
-            if soundId then
-                local hrp = character:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    local sound = Instance.new("Sound")
-                    sound.SoundId = "rbxassetid://" .. soundId
-                    sound.Volume = 1
-                    sound.Parent = hrp
-                    sound:Play()
-                    game.Debris:AddItem(sound, 5)
-                end
-            end
-            
-            if useFOV then
-                local camera = workspace.CurrentCamera
-                local originalFOV = camera.FieldOfView
-                
-                local fovIncrease = game:GetService("TweenService"):Create(
-                    camera,
-                    TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {FieldOfView = originalFOV + 20}
-                )
-                fovIncrease:Play()
-                
-                task.wait(0.3)
-                
-                local fovDecrease = game:GetService("TweenService"):Create(
-                    camera,
-                    TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-                    {FieldOfView = originalFOV}
-                )
-                fovDecrease:Play()
-            end
-            
-            if useRedLight then
-                local Lighting = game:GetService("Lighting")
-                local TweenService = game:GetService("TweenService")
-                
-                local originalAmbient = Lighting.Ambient
-                local originalBrightness = Lighting.Brightness
-                
-                local lightTween = TweenService:Create(
-                    Lighting,
-                    TweenInfo.new(0.5, Enum.EasingStyle.Cubic, Enum.EasingDirection.InOut),
-                    {
-                        Ambient = Color3.new(0.4, 0.05, 0.05),
-                        Brightness = 1
-                    }
-                )
-                lightTween:Play()
-                
-                task.wait(0.5)
-                
-                local lightReturn = TweenService:Create(
-                    Lighting,
-                    TweenInfo.new(0.5, Enum.EasingStyle.Cubic, Enum.EasingDirection.InOut),
-                    {
-                        Ambient = originalAmbient,
-                        Brightness = originalBrightness
-                    }
-                )
-                lightReturn:Play()
-            end
-            
-            if useBlackFlashText then
-                coroutine.wrap(createBlackFlashNotification)()
-            end
+local function handleAnimationReplacement(animationId, config)
+    task.spawn(function()
+        stopSpecificAnimation(animationId, 0.05)
+        
+        local track = playAnimationAdvanced(config.animationId, config)
+        if not track then return end
+        
+        if config.soundId then
+            playSoundWithFade(config.soundId, 1, 0.05)
+        end
+        
+        if config.useFOV then
+            createSmoothFOVEffect(0.4, 20)
+        end
+        
+        if config.useRedLight then
+            createEnhancedRedLight(1)
+        end
+        
+        if config.useBlackFlashText then
+            task.spawn(createBlackFlashNotification)
         end
     end)
 end
 
-bindReplacement(10468665991, 17186602996, 1, nil, 75307432501177, true, true, true)
-bindReplacement(10466974800, 13560306510, 3)
-bindReplacement(10471336737, 18179181663, 1, nil, nil, true, false, false)
-bindReplacement(12510170988, 18897119503, 1)
-bindReplacement(11343318134, 18450698238, 1)
-bindReplacement(11365563255, 17861840167, 0.3)
-bindReplacement(13927612951, 18459220516, 1)
-bindReplacement(15955393872, 18459220516, 1)
-bindReplacement(12983333733, 120001337057214, 0.55)
-bindReplacement(12447707844, 106128760138039, 1)
-bindReplacement(10479335397, 132259592388175, 1)
-bindReplacement(10503381238, 14900168720, 1)
-bindReplacement(10470104242, 17858997926, 1.1)
-
-local animationIdsToStop = {
-    [17859015788] = true,
-    [10469493270] = true,
-    [10469630950] = true,
-    [10469639222] = true,
-    [10469643643] = true
-}
-
-local replacementAnimations = {
-    ["10469493270"] = "rbxassetid://13491635433",
-    ["10469630950"] = "rbxassetid://13532600125",
-    ["10469639222"] = "rbxassetid://104895379416342",
-    ["10469643643"] = "rbxassetid://18181348446",
-    ["17859015788"] = "rbxassetid://12684185971",
-    ["11365563255"] = "rbxassetid://14516273501"
-}
-
-local queue, isAnimating = {}, false
-
-local function playReplacementAnimation(animationId)
-    if isAnimating then
-        table.insert(queue, animationId)
-        return
-    end
-    isAnimating = true
-    local replacementAnimationId = replacementAnimations[tostring(animationId)]
-    if replacementAnimationId then
-        local AnimAnim = Instance.new("Animation")
-        AnimAnim.AnimationId = replacementAnimationId
-        local Anim = humanoid:LoadAnimation(AnimAnim)
-        Anim:Play()
-        Anim.Stopped:Connect(function()
-            isAnimating = false
-            if #queue > 0 then
-                local nextAnimationId = table.remove(queue, 1)
-                playReplacementAnimation(nextAnimationId)
+local function processAnimationQueue()
+    if isProcessingQueue then return end
+    isProcessingQueue = true
+    
+    while #animationQueue > 0 do
+        local animData = table.remove(animationQueue, 1)
+        local config = REPLACEMENT_ANIMATIONS[animData.id]
+        
+        if config then
+            stopAllAnimationsSmooth(config.fadeTime or 0.1)
+            
+            local animId = config.id:match("%d+")
+            if animId then
+                local track = preloadAnimation(tonumber(animId))
+                if track then
+                    if config.priority then
+                        track.Priority = config.priority
+                    end
+                    track:Play(config.fadeTime or 0.1)
+                    currentPlayingTracks[track] = animData.id
+                    
+                    track.Stopped:Wait()
+                end
             end
-        end)
-    else
-        isAnimating = false
+        end
+        
+        task.wait(0.05)
     end
+    
+    isProcessingQueue = false
 end
 
-local function stopSpecificAnimations()
-    for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
-        local animationId = tonumber(track.Animation.AnimationId:match("%d+"))
-        if animationIdsToStop[animationId] then track:Stop() end
-    end
-end
-
-local function onAnimationPlayed(animationTrack)
+humanoid.AnimationPlayed:Connect(function(animationTrack)
     local animationId = tonumber(animationTrack.Animation.AnimationId:match("%d+"))
-    if animationIdsToStop[animationId] then
-        stopSpecificAnimations()
-        animationTrack:Stop()
-        playReplacementAnimation(animationId)
+    if not animationId then return end
+    
+    if ANIMATION_REPLACEMENTS[animationId] then
+        animationTrack:Stop(0.05)
+        handleAnimationReplacement(animationId, ANIMATION_REPLACEMENTS[animationId])
+    elseif REPLACEMENT_ANIMATIONS[animationId] then
+        animationTrack:Stop(0.05)
+        table.insert(animationQueue, {id = animationId, track = animationTrack})
+        task.spawn(processAnimationQueue)
     end
-end
-
-humanoid.AnimationPlayed:Connect(onAnimationPlayed)
+end)
 
 local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
@@ -562,23 +665,46 @@ local function onBodyVelocityAdded(bodyVelocity)
 end
 
 character.DescendantAdded:Connect(onBodyVelocityAdded)
-for _, descendant in pairs(character:GetDescendants()) do onBodyVelocityAdded(descendant) end
+for _, descendant in pairs(character:GetDescendants()) do 
+    onBodyVelocityAdded(descendant) 
+end
 
 player.CharacterAdded:Connect(function(newCharacter)
     character = newCharacter
     humanoid = character:WaitForChild("Humanoid")
     humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    character.DescendantAdded:Connect(onBodyVelocityAdded)
-    for _, descendant in pairs(character:GetDescendants()) do onBodyVelocityAdded(descendant) end
     
-    setupClickHandlers()
-    coroutine.wrap(function() updateToolNames(t1) end)()
-    coroutine.wrap(function() updateToolNames(t2) end)()
+    animationCache = {}
+    activeAnimations = {}
+    animationQueue = {}
+    currentPlayingTracks = {}
+    
+    preloadAllAnimations()
+    
+    character.DescendantAdded:Connect(onBodyVelocityAdded)
+    for _, descendant in pairs(character:GetDescendants()) do 
+        onBodyVelocityAdded(descendant) 
+    end
+    
+    humanoid.AnimationPlayed:Connect(function(animationTrack)
+        local animationId = tonumber(animationTrack.Animation.AnimationId:match("%d+"))
+        if not animationId then return end
+        
+        if ANIMATION_REPLACEMENTS[animationId] then
+            animationTrack:Stop(0.05)
+            handleAnimationReplacement(animationId, ANIMATION_REPLACEMENTS[animationId])
+        elseif REPLACEMENT_ANIMATIONS[animationId] then
+            animationTrack:Stop(0.05)
+            table.insert(animationQueue, {id = animationId, track = animationTrack})
+            task.spawn(processAnimationQueue)
+        end
+    end)
 end)
 
+preloadAllAnimations()
 setupClickHandlers()
-coroutine.wrap(function() updateToolNames(t1) end)()
-coroutine.wrap(function() updateToolNames(t2) end)()
+task.spawn(N1)
+task.spawn(N2)
 
 task.wait(1)
 showWelcomeMessage()
