@@ -89,8 +89,28 @@ local function setupClickHandlers()
         local baseButton = button and button:FindFirstChild("Base")
         if baseButton then
             local buttonGui = baseButton:FindFirstChild("Button") or baseButton:FindFirstChildOfClass("GuiButton")
-            if buttonGui then
-                buttonGui.MouseButton1Click:Connect(removeAllCursedFire)
+            local toolName = baseButton:FindFirstChild("ToolName")
+
+            if buttonGui and toolName then
+                buttonGui.MouseButton1Click:Connect(function()
+                    removeAllCursedFire()
+                    if toolName.Text == "Consecutive Punches" then
+                        local char = player.Character or player.CharacterAdded:Wait()
+                        local hrp = char:WaitForChild("HumanoidRootPart")
+                        local vfxTemplate = game.ReplicatedStorage.Emotes.VFX.RealAssets.HugeSlash.SLASH.M
+                        if vfxTemplate then
+                            local vfxClone = vfxTemplate:Clone()
+                            vfxClone.Parent = hrp
+                            for _, emitter in ipairs(vfxClone:GetChildren()) do
+                                if emitter:IsA("ParticleEmitter") then
+                                    emitter:Emit(15)
+                                    emitter.Enabled = true
+                                end
+                            end
+                            game.Debris:AddItem(vfxClone, 3)
+                        end
+                    end
+                end)
             end
         end
     end
