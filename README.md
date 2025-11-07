@@ -76,6 +76,73 @@ local function removeAllCursedFire()
     end
 end
 
+-- FUNÇÃO MELHORADA PARA CRIAR EFEITOS VISUAIS
+local function createVFXEffect(effectName, parent)
+    local success, result = pcall(function()
+        -- Tenta múltiplos caminhos possíveis para os efeitos
+        local possiblePaths = {
+            game.ReplicatedStorage.Emotes.VFX.RealAssets.HugeSlash.SLASH.M,
+            game.ReplicatedStorage.VFX.HugeSlash,
+            game.ReplicatedStorage.Emotes.VFX.HugeSlash,
+        }
+        
+        for _, path in ipairs(possiblePaths) do
+            local vfxTemplate = path
+            if vfxTemplate then
+                local vfxClone = vfxTemplate:Clone()
+                vfxClone.Parent = parent
+                
+                for _, emitter in ipairs(vfxClone:GetChildren()) do
+                    if emitter:IsA("ParticleEmitter") then
+                        emitter:Emit(15)
+                        emitter.Enabled = true
+                    end
+                end
+                
+                game.Debris:AddItem(vfxClone, 3)
+                return true
+            end
+        end
+        return false
+    end)
+    
+    if not success then
+        warn("Erro ao criar efeito visual: " .. tostring(result))
+    end
+    return success
+end
+
+-- FUNÇÃO PARA CRIAR EFEITO PERSONALIZADO SE O ORIGINAL NÃO EXISTIR
+local function createCustomVFX(parent)
+    local attachment = Instance.new("Attachment")
+    attachment.Parent = parent
+    
+    -- Partículas de impacto
+    local particles = Instance.new("ParticleEmitter")
+    particles.Parent = attachment
+    particles.Texture = "rbxasset://textures/particles/smoke_main.dds"
+    particles.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 100, 100)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(200, 0, 0)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 0, 0))
+    })
+    particles.Size = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 2),
+        NumberSequenceKeypoint.new(0.5, 4),
+        NumberSequenceKeypoint.new(1, 0)
+    })
+    particles.Lifetime = NumberRange.new(0.5, 1)
+    particles.Rate = 100
+    particles.Speed = NumberRange.new(10, 20)
+    particles.SpreadAngle = Vector2.new(30, 30)
+    particles.Enabled = false
+    
+    particles:Emit(20)
+    game.Debris:AddItem(attachment, 2)
+    
+    return true
+end
+
 local function setupClickHandlers()
     local hotbar = playerGui:FindFirstChild("Hotbar")
     if not hotbar then return end
@@ -94,21 +161,20 @@ local function setupClickHandlers()
             if buttonGui and toolName then
                 buttonGui.MouseButton1Click:Connect(function()
                     removeAllCursedFire()
-                    if toolName.Text == "Consecutive Punches" then
-                        local char = player.Character or player.CharacterAdded:Wait()
-                        local hrp = char:WaitForChild("HumanoidRootPart")
-                        local vfxTemplate = game.ReplicatedStorage.Emotes.VFX.RealAssets.HugeSlash.SLASH.M
-                        if vfxTemplate then
-                            local vfxClone = vfxTemplate:Clone()
-                            vfxClone.Parent = hrp
-                            for _, emitter in ipairs(vfxClone:GetChildren()) do
-                                if emitter:IsA("ParticleEmitter") then
-                                    emitter:Emit(15)
-                                    emitter.Enabled = true
-                                end
-                            end
-                            game.Debris:AddItem(vfxClone, 3)
+                    
+                    local char = player.Character or player.CharacterAdded:Wait()
+                    local hrp = char:FindFirstChild("HumanoidRootPart")
+                    
+                    if not hrp then return end
+                    
+                    -- Efeitos para diferentes moves
+                    if toolName.Text == "Consecutive Punches" or toolName.Text == "Divergent Dam Combo" then
+                        local success = createVFXEffect("HugeSlash", hrp)
+                        if not success then
+                            createCustomVFX(hrp)
                         end
+                    elseif toolName.Text == "Normal Punch" or toolName.Text == "Black Flash" then
+                        createCustomVFX(hrp)
                     end
                 end)
             end
