@@ -42,7 +42,6 @@ local ATTACK_CONFIG = {
 }
 
 local ANIMATION_REPLACEMENTS = {
-    [10468665991] = "Normal Punch",
     [10466974800] = "Consecutive Punches",
     [10471336737] = "Shove",
     [12510170988] = {animationId = 18897119503, speed = 1},
