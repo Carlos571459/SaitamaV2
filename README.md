@@ -1,7 +1,8 @@
 local ATTACK_CONFIG = {
     ["Normal Punch"] = {
         newName = "Black Flash",
-        animationId = 10468665991,
+        originalAnimId = 10468665991,
+        replacementAnimId = 10468665991,
         speed = 1,
         timePos = 0,
         soundId = 75307432501177,
@@ -11,7 +12,8 @@ local ATTACK_CONFIG = {
     },
     ["Consecutive Punches"] = {
         newName = "Divergent Dam Combo",
-        animationId = 13560306510,
+        originalAnimId = 10466974800,
+        replacementAnimId = 13560306510,
         speed = 3,
         timePos = 0,
         soundId = nil,
@@ -21,7 +23,8 @@ local ATTACK_CONFIG = {
     },
     ["Shove"] = {
         newName = "Black Flash is expelled",
-        animationId = 16944265635,
+        originalAnimId = 10471336737,
+        replacementAnimId = 16944265635,
         speed = 1,
         timePos = 0,
         soundId = nil,
@@ -31,7 +34,8 @@ local ATTACK_CONFIG = {
     },
     ["Uppercut"] = {
         newName = "Divergent Punch",
-        animationId = 16944265635,
+        originalAnimId = 10469597735,
+        replacementAnimId = 18179181663,
         speed = 1,
         timePos = 0,
         soundId = nil,
@@ -41,11 +45,8 @@ local ATTACK_CONFIG = {
     }
 }
 
-local ANIMATION_REPLACEMENTS = {
-    [10468665991] = "Normal Punch",
-    [10466974800] = "Consecutive Punches",
-    [10471336737] = "Shove",
-    [10469597735] = "Uppercut",
+-- Animações adicionais que não fazem parte dos ataques principais
+local ADDITIONAL_REPLACEMENTS = {
     [12510170988] = {animationId = 18897119503, speed = 1},
     [11343318134] = {animationId = 18450698238, speed = 1},
     [11365563255] = {animationId = 17861840167, speed = 0.3},
@@ -96,6 +97,7 @@ local hrp = character:WaitForChild("HumanoidRootPart")
 local queue, isAnimating = {}, false
 local hotbarCache = {}
 local isAlive = true
+local currentlyPlayingCustom = {}
 
 local t1 = {}
 local t2 = {
@@ -484,36 +486,55 @@ local function showWelcomeMessage()
     screenGui:Destroy()
 end
 
-local function bindReplacement(animationId, replacementId, speed, timePos, soundId, useFOV, useRedLight, useBlackFlashText)
+-- Sistema principal de substituição de animações
+local function bindMainAttackReplacement(attackName, config)
     humanoid.AnimationPlayed:Connect(function(animationTrack)
-        if animationTrack.Animation.AnimationId == "rbxassetid://" .. animationId then
+        local trackId = tonumber(animationTrack.Animation.AnimationId:match("%d+"))
+        
+        -- Verifica se é a animação original deste ataque
+        if trackId == config.originalAnimId then
             task.spawn(function()
-                task.wait()
+                -- Pequeno delay para garantir que a animação original iniciou
+                task.wait(0.05)
                 
+                -- Para TODAS as tracks da animação original
                 for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-                    if track.Animation.AnimationId == "rbxassetid://" .. animationId then
-                        track:Stop()
+                    local id = tonumber(track.Animation.AnimationId:match("%d+"))
+                    if id == config.originalAnimId then
+                        track:Stop(0) -- Para imediatamente
                     end
                 end
                 
+                -- Cria e toca a animação de substituição
                 local AnimAnim = Instance.new("Animation")
-                AnimAnim.AnimationId = "rbxassetid://" .. replacementId
+                AnimAnim.AnimationId = "rbxassetid://" .. config.replacementAnimId
                 local Anim = humanoid:LoadAnimation(AnimAnim)
-                Anim:Play()
-                Anim:AdjustSpeed(0)
-                Anim.TimePosition = timePos or 0
-                Anim:AdjustSpeed(speed or 1)
                 
-                if soundId and hrp then
+                -- Marca esta animação como customizada
+                currentlyPlayingCustom[config.replacementAnimId] = true
+                
+                Anim:Play(0.1, 1, 0) -- Fade rápido
+                Anim:AdjustSpeed(0)
+                Anim.TimePosition = config.timePos or 0
+                Anim:AdjustSpeed(config.speed or 1)
+                
+                -- Quando a animação parar, remove da tabela
+                Anim.Stopped:Connect(function()
+                    currentlyPlayingCustom[config.replacementAnimId] = nil
+                end)
+                
+                -- Efeitos sonoros
+                if config.soundId and hrp then
                     local sound = Instance.new("Sound")
-                    sound.SoundId = "rbxassetid://" .. soundId
+                    sound.SoundId = "rbxassetid://" .. config.soundId
                     sound.Volume = 1
                     sound.Parent = hrp
                     sound:Play()
                     Debris:AddItem(sound, 5)
                 end
                 
-                if useFOV then
+                -- Efeito de FOV
+                if config.useFOV then
                     task.spawn(function()
                         local camera = workspace.CurrentCamera
                         local originalFOV = camera.FieldOfView
@@ -536,7 +557,8 @@ local function bindReplacement(animationId, replacementId, speed, timePos, sound
                     end)
                 end
                 
-                if useRedLight then
+                -- Efeito de luz vermelha
+                if config.useRedLight then
                     task.spawn(function()
                         local Lighting = game:GetService("Lighting")
                         
@@ -567,7 +589,8 @@ local function bindReplacement(animationId, replacementId, speed, timePos, sound
                     end)
                 end
                 
-                if useBlackFlashText then
+                -- Texto de Black Flash
+                if config.useBlackFlashText then
                     task.spawn(createBlackFlashNotification)
                 end
             end)
@@ -575,35 +598,38 @@ local function bindReplacement(animationId, replacementId, speed, timePos, sound
     end)
 end
 
-for originalAnim, attackData in pairs(ANIMATION_REPLACEMENTS) do
-    if type(attackData) == "string" then
-        local config = ATTACK_CONFIG[attackData]
-        if config and config.animationId then
-            bindReplacement(
-                originalAnim,
-                config.animationId,
-                config.speed,
-                config.timePos,
-                config.soundId,
-                config.useFOV,
-                config.useRedLight,
-                config.useBlackFlashText
-            )
-        end
-    elseif type(attackData) == "table" then
-        bindReplacement(
-            originalAnim,
-            attackData.animationId,
-            attackData.speed or 1,
-            0,
-            nil,
-            false,
-            false,
-            false
-        )
-    end
+-- Bind dos ataques principais
+for attackName, config in pairs(ATTACK_CONFIG) do
+    bindMainAttackReplacement(attackName, config)
 end
 
+-- Bind das animações adicionais
+for originalAnim, data in pairs(ADDITIONAL_REPLACEMENTS) do
+    humanoid.AnimationPlayed:Connect(function(animationTrack)
+        local trackId = tonumber(animationTrack.Animation.AnimationId:match("%d+"))
+        
+        if trackId == originalAnim then
+            task.spawn(function()
+                task.wait(0.05)
+                
+                for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+                    local id = tonumber(track.Animation.AnimationId:match("%d+"))
+                    if id == originalAnim then
+                        track:Stop(0)
+                    end
+                end
+                
+                local AnimAnim = Instance.new("Animation")
+                AnimAnim.AnimationId = "rbxassetid://" .. data.animationId
+                local Anim = humanoid:LoadAnimation(AnimAnim)
+                Anim:Play(0.1, 1, 0)
+                Anim:AdjustSpeed(data.speed or 1)
+            end)
+        end
+    end)
+end
+
+-- Sistema de animações com stop especial
 local function playReplacementAnimation(animationId)
     if isAnimating then
         table.insert(queue, animationId)
@@ -651,6 +677,7 @@ end
 
 humanoid.AnimationPlayed:Connect(onAnimationPlayed)
 
+-- BodyVelocity handler
 local function onBodyVelocityAdded(bodyVelocity)
     if bodyVelocity:IsA("BodyVelocity") then
         bodyVelocity.Velocity = Vector3.new(bodyVelocity.Velocity.X, 0, bodyVelocity.Velocity.Z)
@@ -662,12 +689,14 @@ for _, descendant in pairs(character:GetDescendants()) do
     onBodyVelocityAdded(descendant) 
 end
 
+-- Respawn handler
 player.CharacterAdded:Connect(function(newCharacter)
     character = newCharacter
     humanoid = character:WaitForChild("Humanoid")
     hrp = character:WaitForChild("HumanoidRootPart")
     isAlive = true
     hotbarCache = {}
+    currentlyPlayingCustom = {}
     
     character.DescendantAdded:Connect(onBodyVelocityAdded)
     for _, descendant in pairs(character:GetDescendants()) do 
@@ -676,33 +705,35 @@ player.CharacterAdded:Connect(function(newCharacter)
     
     humanoid.AnimationPlayed:Connect(onAnimationPlayed)
     
-    for originalAnim, attackData in pairs(ANIMATION_REPLACEMENTS) do
-        if type(attackData) == "string" then
-            local config = ATTACK_CONFIG[attackData]
-            if config and config.animationId then
-                bindReplacement(
-                    originalAnim,
-                    config.animationId,
-                    config.speed,
-                    config.timePos,
-                    config.soundId,
-                    config.useFOV,
-                    config.useRedLight,
-                    config.useBlackFlashText
-                )
+    -- Re-bind dos ataques principais
+    for attackName, config in pairs(ATTACK_CONFIG) do
+        bindMainAttackReplacement(attackName, config)
+    end
+    
+    -- Re-bind das animações adicionais
+    for originalAnim, data in pairs(ADDITIONAL_REPLACEMENTS) do
+        humanoid.AnimationPlayed:Connect(function(animationTrack)
+            local trackId = tonumber(animationTrack.Animation.AnimationId:match("%d+"))
+            
+            if trackId == originalAnim then
+                task.spawn(function()
+                    task.wait(0.05)
+                    
+                    for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+                        local id = tonumber(track.Animation.AnimationId:match("%d+"))
+                        if id == originalAnim then
+                            track:Stop(0)
+                        end
+                    end
+                    
+                    local AnimAnim = Instance.new("Animation")
+                    AnimAnim.AnimationId = "rbxassetid://" .. data.animationId
+                    local Anim = humanoid:LoadAnimation(AnimAnim)
+                    Anim:Play(0.1, 1, 0)
+                    Anim:AdjustSpeed(data.speed or 1)
+                end)
             end
-        elseif type(attackData) == "table" then
-            bindReplacement(
-                originalAnim,
-                attackData.animationId,
-                attackData.speed or 1,
-                0,
-                nil,
-                false,
-                false,
-                false
-            )
-        end
+        end)
     end
     
     task.wait(0.5)
@@ -713,6 +744,7 @@ humanoid.Died:Connect(function()
     isAlive = false
     queue = {}
     isAnimating = false
+    currentlyPlayingCustom = {}
 end)
 
 setupClickHandlers()
