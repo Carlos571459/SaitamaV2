@@ -182,7 +182,7 @@ local function bindReplacement(animationId, replacementId, speed, timePos)
     end)
 end
 
-bindReplacement(10468665991, 12509505723, 1)
+bindReplacement(10468665991, 17186602996, 1)
 bindReplacement(10466974800, 13560306510, 3)
 bindReplacement(10471336737, 18249294373, 1)
 bindReplacement(12510170988, 18897119503, 1)
