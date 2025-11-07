@@ -516,12 +516,12 @@ local function bindReplacement(animationId, replacementId, speed, timePos, sound
     end)
 end
 
--- Normal Punch com TODOS os efeitos (FOV, Luz, Texto)
+-- Normal Punch com todos os efeitos
 bindReplacement(10468665991, 17186602996, 1, nil, 75307432501177, true, true, true)
--- Consecutive Punches (sem efeitos)
+-- Consecutive Punches
 bindReplacement(10466974800, 13560306510, 3)
--- Uppercut SEM efeitos de luz e texto, apenas FOV
-bindReplacement(10471336737, 18182425133, 1, nil, nil, true, false, false)
+-- Uppercut com todos os efeitos
+bindReplacement(10471336737, 18182425133, 1, nil, nil, true, true, true)
 bindReplacement(12510170988, 18897119503, 1)
 bindReplacement(11343318134, 18450698238, 1)
 bindReplacement(11365563255, 17861840167, 0.3)
