@@ -1,8 +1,7 @@
 local ATTACK_CONFIG = {
     ["Normal Punch"] = {
         newName = "Black Flash",
-        originalAnimId = 10468665991,
-        replacementAnimId = 10468665991,
+        animationId = 17186602996,
         speed = 1,
         timePos = 0,
         soundId = 75307432501177,
@@ -12,8 +11,7 @@ local ATTACK_CONFIG = {
     },
     ["Consecutive Punches"] = {
         newName = "Divergent Dam Combo",
-        originalAnimId = 10466974800,
-        replacementAnimId = 13560306510,
+        animationId = 13560306510,
         speed = 3,
         timePos = 0,
         soundId = nil,
@@ -23,8 +21,7 @@ local ATTACK_CONFIG = {
     },
     ["Shove"] = {
         newName = "Black Flash is expelled",
-        originalAnimId = 10471336737,
-        replacementAnimId = 16944265635,
+        animationId = 18179181663,
         speed = 1,
         timePos = 0,
         soundId = nil,
@@ -34,8 +31,7 @@ local ATTACK_CONFIG = {
     },
     ["Uppercut"] = {
         newName = "Divergent Punch",
-        originalAnimId = 10469597735,
-        replacementAnimId = 18179181663,
+        animationId = nil,
         speed = 1,
         timePos = 0,
         soundId = nil,
@@ -45,7 +41,10 @@ local ATTACK_CONFIG = {
     }
 }
 
-local ADDITIONAL_REPLACEMENTS = {
+local ANIMATION_REPLACEMENTS = {
+    [10468665991] = "Normal Punch",
+    [10466974800] = "Consecutive Punches",
+    [10471336737] = "Shove",
     [12510170988] = {animationId = 18897119503, speed = 1},
     [11343318134] = {animationId = 18450698238, speed = 1},
     [11365563255] = {animationId = 17861840167, speed = 0.3},
@@ -58,23 +57,6 @@ local ADDITIONAL_REPLACEMENTS = {
     [10470104242] = {animationId = 17858997926, speed = 1.1}
 }
 
-local animationIdsToStop = {
-    [17859015788] = true,
-    [10469493270] = true,
-    [10469630950] = true,
-    [10469639222] = true,
-    [10469643643] = true
-}
-
-local replacementAnimations = {
-    ["10469493270"] = "rbxassetid://13491635433",
-    ["10469630950"] = "rbxassetid://13532600125",
-    ["10469639222"] = "rbxassetid://104895379416342",
-    ["10469643643"] = "rbxassetid://18181348446",
-    ["17859015788"] = "rbxassetid://12684185971",
-    ["11365563255"] = "rbxassetid://14516273501"
-}
-
 local fontConfig = {
     Enabled = true,
     Font = Enum.Font.Sarpanch,
@@ -82,110 +64,47 @@ local fontConfig = {
     Style = Enum.FontStyle.Normal
 }
 
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local Debris = game:GetService("Debris")
-local RunService = game:GetService("RunService")
-
-local player = Players.LocalPlayer
+local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
-local hrp = character:WaitForChild("HumanoidRootPart")
 
-local queue, isAnimating = {}, false
-local hotbarCache = {}
-local isAlive = true
-local currentlyPlayingCustom = {}
-local activeTweens = {}
-local processedAnimations = {}
-local lastSoundTime = {}
-
-local t1 = {}
-local t2 = {
-    ["1"] = {original = "Death Counter", new = "?"},
-    ["2"] = {original = "Table Flip", new = "?"},
-    ["3"] = {original = "Serious Punch", new = "?"},
-    ["4"] = {original = "Omni Directional Punch", new = "?"}
+local t1 = {
+    ["1"] = {original = og1, new = mn1},
+    ["2"] = {original = og2, new = mn2},
+    ["3"] = {original = og3, new = mn3},
+    ["4"] = {original = og4, new = mn4}
 }
 
-for i, attackName in ipairs({"Normal Punch", "Consecutive Punches", "Shove", "Uppercut"}) do
-    local config = ATTACK_CONFIG[attackName]
-    if config then
-        t1[tostring(i)] = {original = attackName, new = config.newName}
-    end
-end
-
-local function cleanupTweens()
-    for _, tween in ipairs(activeTweens) do
-        if tween and tween.PlaybackState == Enum.PlaybackState.Playing then
-            tween:Cancel()
-        end
-    end
-    activeTweens = {}
-end
-
-local function registerTween(tween)
-    table.insert(activeTweens, tween)
-    return tween
-end
-
-local function getHotbarPath()
-    if hotbarCache.hotbar and hotbarCache.hotbar.Parent then
-        return hotbarCache.hotbar, hotbarCache.backpack, hotbarCache.hotbarFrame
-    end
-    
-    local hotbar = playerGui:FindFirstChild("Hotbar")
-    if not hotbar then return nil, nil, nil end
-    
-    local backpack = hotbar:FindFirstChild("Backpack")
-    if not backpack then return nil, nil, nil end
-    
-    local hotbarFrame = backpack:FindFirstChild("Hotbar")
-    if not hotbarFrame then return nil, nil, nil end
-    
-    hotbarCache.hotbar = hotbar
-    hotbarCache.backpack = backpack
-    hotbarCache.hotbarFrame = hotbarFrame
-    
-    return hotbar, backpack, hotbarFrame
-end
+local t2 = {
+    ["1"] = {original = ultOG1, new = ult1},
+    ["2"] = {original = ultOG2, new = ult2},
+    ["3"] = {original = ultOG3, new = ult3},
+    ["4"] = {original = ultOG4, new = ult4}
+}
 
 local function applyFont(label)
     if fontConfig.Enabled and label:IsA("TextLabel") then
-        local success = pcall(function()
-            label.FontFace = Font.new(label.FontFace.Family, fontConfig.Weight, fontConfig.Style)
-            label.Font = fontConfig.Font
-        end)
-        return success
+        label.FontFace = Font.new(label.FontFace.Family, fontConfig.Weight, fontConfig.Style)
+        label.Font = fontConfig.Font
     end
-    return false
 end
 
 local function removeCursedFireFrom(buttonBase)
     local group = buttonBase:FindFirstChild("CursedFireEffectGroup")
-    if group then 
-        group:Destroy() 
-    end
+    if group then group:Destroy() end
 end
 
 local function addCursedFireTo(buttonBase)
     removeCursedFireFrom(buttonBase)
-    
-    local success = pcall(function()
-        local flipbook = playerGui.Hotbar.Backpack.LocalScript:FindFirstChild("Flipbook")
-        if not flipbook then return end
-        
-        local clone = flipbook:Clone()
+    local kj = playerGui.Hotbar.Backpack.LocalScript:FindFirstChild("Flipbook")
+    if kj then
+        local clone = kj:Clone()
         local group = Instance.new("Folder")
         group.Name = "CursedFireEffectGroup"
         group.Parent = buttonBase
         clone.Parent = group
-        
-        if clone:FindFirstChild("LocalScript") then
-            clone.LocalScript.Enabled = true
-        end
-        
+        clone.LocalScript.Enabled = true
         for _, desc in pairs(clone:GetDescendants()) do
             if desc:IsA("ParticleEmitter") then
                 desc.Color = ColorSequence.new({
@@ -195,101 +114,103 @@ local function addCursedFireTo(buttonBase)
                 })
             end
         end
-    end)
+    end
 end
 
 local function removeAllCursedFire()
-    local _, _, hotbarFrame = getHotbarPath()
+    local hotbar = playerGui:FindFirstChild("Hotbar")
+    if not hotbar then return end
+    local backpack = hotbar:FindFirstChild("Backpack")
+    if not backpack then return end
+    local hotbarFrame = backpack:FindFirstChild("Hotbar")
     if not hotbarFrame then return end
-    
     for i = 1, 4 do
-        local button = hotbarFrame:FindFirstChild(tostring(i))
-        if button then
-            local baseButton = button:FindFirstChild("Base")
-            if baseButton then
-                removeCursedFireFrom(baseButton)
-            end
-        end
+        local baseButton = hotbarFrame:FindFirstChild(tostring(i))
+        baseButton = baseButton and baseButton:FindFirstChild("Base")
+        if baseButton then removeCursedFireFrom(baseButton) end
     end
 end
 
 local function setupClickHandlers()
-    local _, _, hotbarFrame = getHotbarPath()
+    local hotbar = playerGui:FindFirstChild("Hotbar")
+    if not hotbar then return end
+    local backpack = hotbar:FindFirstChild("Backpack")
+    if not backpack then return end
+    local hotbarFrame = backpack:FindFirstChild("Hotbar")
     if not hotbarFrame then return end
 
     for i = 1, 4 do
         local button = hotbarFrame:FindFirstChild(tostring(i))
-        if button then
-            local baseButton = button:FindFirstChild("Base")
-            if baseButton then
-                local buttonGui = baseButton:FindFirstChild("Button") or baseButton:FindFirstChildOfClass("GuiButton")
-                if buttonGui then
-                    buttonGui.MouseButton1Click:Connect(removeAllCursedFire)
-                end
+        local baseButton = button and button:FindFirstChild("Base")
+        if baseButton then
+            local buttonGui = baseButton:FindFirstChild("Button") or baseButton:FindFirstChildOfClass("GuiButton")
+            if buttonGui then
+                buttonGui.MouseButton1Click:Connect(function()
+                    removeAllCursedFire()
+                end)
             end
         end
     end
 end
 
-local function updateHotbarNames(toolTable)
-    local _, _, hotbarFrame = getHotbarPath()
-    if not hotbarFrame then return end
-    
-    for buttonName, toolData in pairs(toolTable) do
-        local button = hotbarFrame:FindFirstChild(buttonName)
-        if button then
-            local baseButton = button:FindFirstChild("Base")
-            if baseButton then
-                local toolName = baseButton:FindFirstChild("ToolName")
-                if toolName and toolName.Text == toolData.original then
-                    toolName.Text = toolData.new
-                    applyFont(toolName)
-                end
-            end
-        end
-    end
-end
-
-local function updateCursedFireEffect()
-    local _, _, hotbarFrame = getHotbarPath()
-    if not hotbarFrame then return end
-    
-    for buttonName, toolData in pairs(t2) do
-        local button = hotbarFrame:FindFirstChild(buttonName)
-        if button then
-            local baseButton = button:FindFirstChild("Base")
-            if baseButton then
-                local toolName = baseButton:FindFirstChild("ToolName")
-                if toolName then
-                    if toolName.Text == toolData.original then
-                        toolName.Text = toolData.new
-                        applyFont(toolName)
-                    end
-                    
-                    if toolName.Text == "Do not change here" then
-                        addCursedFireTo(baseButton)
-                    else
-                        removeCursedFireFrom(baseButton)
+local function N1()
+    while character.Humanoid.Health > 0 do
+        local hotbar = playerGui:FindFirstChild("Hotbar")
+        if hotbar then
+            local backpack = hotbar:FindFirstChild("Backpack")
+            if backpack then
+                local hotbarFrame = backpack:FindFirstChild("Hotbar")
+                if hotbarFrame then
+                    for buttonName, toolData in pairs(t1) do
+                        local baseButton = hotbarFrame:FindFirstChild(buttonName)
+                        baseButton = baseButton and baseButton:FindFirstChild("Base")
+                        if baseButton then
+                            local toolName = baseButton:FindFirstChild("ToolName")
+                            if toolName and toolName.Text == toolData.original then
+                                toolName.Text = toolData.new
+                                applyFont(toolName)
+                            end
+                        end
                     end
                 end
             end
         end
+        task.wait(0.1)
     end
 end
 
-local lastUpdate = 0
-local UPDATE_INTERVAL = 0.2
-
-RunService.Heartbeat:Connect(function()
-    if not isAlive then return end
-    
-    local currentTime = tick()
-    if currentTime - lastUpdate >= UPDATE_INTERVAL then
-        lastUpdate = currentTime
-        updateHotbarNames(t1)
-        updateCursedFireEffect()
+local function N2()
+    while character.Humanoid.Health > 0 do
+        local hotbar = playerGui:FindFirstChild("Hotbar")
+        if hotbar then
+            local backpack = hotbar:FindFirstChild("Backpack")
+            if backpack then
+                local hotbarFrame = backpack:FindFirstChild("Hotbar")
+                if hotbarFrame then
+                    for buttonName, toolData in pairs(t2) do
+                        local baseButton = hotbarFrame:FindFirstChild(buttonName)
+                        baseButton = baseButton and baseButton:FindFirstChild("Base")
+                        if baseButton then
+                            local toolName = baseButton:FindFirstChild("ToolName")
+                            if toolName then
+                                if toolName.Text == toolData.original then
+                                    toolName.Text = toolData.new
+                                    applyFont(toolName)
+                                end
+                                if toolName.Text == "Do not change here" then
+                                    addCursedFireTo(baseButton)
+                                else
+                                    removeCursedFireFrom(baseButton)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(0.1)
     end
-end)
+end
 
 local function createBlackFlashNotification()
     local screenGui = playerGui:FindFirstChild("BlackFlashNotifications")
@@ -297,7 +218,6 @@ local function createBlackFlashNotification()
         screenGui = Instance.new("ScreenGui")
         screenGui.Name = "BlackFlashNotifications"
         screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-        screenGui.ResetOnSpawn = false
         screenGui.Parent = playerGui
     end
     
@@ -321,7 +241,7 @@ local function createBlackFlashNotification()
     sound.Volume = 0.5
     sound.Parent = frame
     sound:Play()
-    Debris:AddItem(sound, 2)
+    game.Debris:AddItem(sound, 2)
     
     local message = Instance.new("TextLabel")
     message.Text = "BLACK FLASH"
@@ -345,39 +265,38 @@ local function createBlackFlashNotification()
     local origSize = message.TextSize
     message.TextSize = 0
     
-    local tweenIn = TweenService:Create(
+    local tweenIn = game:GetService("TweenService"):Create(
         message,
         TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
         {TextSize = origSize}
     )
     tweenIn:Play()
     
-    local pulseTween = TweenService:Create(
+    local pulseTween = game:GetService("TweenService"):Create(
         stroke,
         TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
         {Transparency = 0.5}
     )
     pulseTween:Play()
     
-    task.delay(2, function()
-        pulseTween:Cancel()
-        
-        local tweenOut = TweenService:Create(
-            message,
-            TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-            {TextSize = 0}
-        )
-        tweenOut:Play()
-        
-        Debris:AddItem(message, 0.3)
-    end)
+    task.wait(2)
+    
+    pulseTween:Cancel()
+    
+    local tweenOut = game:GetService("TweenService"):Create(
+        message,
+        TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+        {TextSize = 0}
+    )
+    tweenOut:Play()
+    
+    game:GetService("Debris"):AddItem(message, 0.3)
 end
 
 local function showWelcomeMessage()
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "WelcomeMessage"
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    screenGui.ResetOnSpawn = false
     screenGui.Parent = playerGui
     
     local frame = Instance.new("Frame")
@@ -427,6 +346,8 @@ local function showWelcomeMessage()
         table.insert(particles, particle)
     end
     
+    local TweenService = game:GetService("TweenService")
+    
     for _, particle in ipairs(particles) do
         local angle = math.rad(math.random(0, 360))
         local distance = math.random(200, 400)
@@ -465,23 +386,7 @@ local function showWelcomeMessage()
     )
     expandTween:Play()
     
-    task.wait(0.5)
-    setupClickHandlers()
-end)
-
-humanoid.Died:Connect(function()
-    isAlive = false
-    queue = {}
-    isAnimating = false
-    currentlyPlayingCustom = {}
-    processedAnimations = {}
-    lastSoundTime = {}
-    cleanupTweens()
-end)
-
-setupClickHandlers()
-task.wait(1)
-showWelcomeMessage().3)
+    task.wait(0.3)
     
     local shakeDuration = 0.4
     local shakeIntensity = 5
@@ -520,187 +425,140 @@ showWelcomeMessage().3)
     screenGui:Destroy()
 end
 
-local function bindMainAttackReplacement(attackName, config)
-    local connections = {}
-    
-    local connection = humanoid.AnimationPlayed:Connect(function(animationTrack)
-        local trackId = tonumber(animationTrack.Animation.AnimationId:match("%d+"))
-        
-        if trackId == config.originalAnimId then
-            local animKey = config.originalAnimId .. "_" .. tick()
-            
-            if processedAnimations[config.originalAnimId] and tick() - processedAnimations[config.originalAnimId] < 0.1 then
-                return
-            end
-            
-            processedAnimations[config.originalAnimId] = tick()
-            
-            task.spawn(function()
-                task.wait(0.05)
-                
-                for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-                    local id = tonumber(track.Animation.AnimationId:match("%d+"))
-                    if id == config.originalAnimId and track ~= animationTrack then
-                        track:Stop(0)
-                    end
-                end
-                
-                if currentlyPlayingCustom[config.replacementAnimId] then
-                    return
-                end
-                
-                local AnimAnim = Instance.new("Animation")
-                AnimAnim.AnimationId = "rbxassetid://" .. config.replacementAnimId
-                local Anim = humanoid:LoadAnimation(AnimAnim)
-                
-                currentlyPlayingCustom[config.replacementAnimId] = true
-                
-                Anim:Play(0.1, 1, 0)
-                Anim:AdjustSpeed(0)
-                Anim.TimePosition = config.timePos or 0
-                Anim:AdjustSpeed(config.speed or 1)
-                
-                Anim.Stopped:Connect(function()
-                    currentlyPlayingCustom[config.replacementAnimId] = nil
-                end)
-                
-                if config.soundId and hrp then
-                    local soundKey = tostring(config.soundId)
-                    local currentTime = tick()
-                    
-                    if not lastSoundTime[soundKey] or currentTime - lastSoundTime[soundKey] > 0.3 then
-                        lastSoundTime[soundKey] = currentTime
-                        
-                        for _, child in pairs(hrp:GetChildren()) do
-                            if child:IsA("Sound") and child.SoundId == "rbxassetid://" .. config.soundId then
-                                child:Destroy()
-                            end
-                        end
-                        
-                        local sound = Instance.new("Sound")
-                        sound.SoundId = "rbxassetid://" .. config.soundId
-                        sound.Volume = 1
-                        sound.Parent = hrp
-                        sound:Play()
-                        Debris:AddItem(sound, 5)
-                    end
-                end
-                
-                if config.useFOV then
-                    task.spawn(function()
-                        local camera = workspace.CurrentCamera
-                        local originalFOV = camera.FieldOfView
-                        
-                        local fovIncrease = registerTween(TweenService:Create(
-                            camera,
-                            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {FieldOfView = originalFOV + 20}
-                        ))
-                        fovIncrease:Play()
-                        
-                        task.wait(0.3)
-                        
-                        local fovDecrease = registerTween(TweenService:Create(
-                            camera,
-                            TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-                            {FieldOfView = originalFOV}
-                        ))
-                        fovDecrease:Play()
-                    end)
-                end
-                
-                if config.useRedLight then
-                    task.spawn(function()
-                        local Lighting = game:GetService("Lighting")
-                        
-                        local originalAmbient = Lighting.Ambient
-                        local originalBrightness = Lighting.Brightness
-                        
-                        local lightTween = registerTween(TweenService:Create(
-                            Lighting,
-                            TweenInfo.new(0.5, Enum.EasingStyle.Cubic, Enum.EasingDirection.InOut),
-                            {
-                                Ambient = Color3.new(0.4, 0.05, 0.05),
-                                Brightness = 1
-                            }
-                        ))
-                        lightTween:Play()
-                        
-                        task.wait(0.5)
-                        
-                        local lightReturn = registerTween(TweenService:Create(
-                            Lighting,
-                            TweenInfo.new(0.5, Enum.EasingStyle.Cubic, Enum.EasingDirection.InOut),
-                            {
-                                Ambient = originalAmbient,
-                                Brightness = originalBrightness
-                            }
-                        ))
-                        lightReturn:Play()
-                    end)
-                end
-                
-                if config.useBlackFlashText then
-                    task.spawn(createBlackFlashNotification)
-                end
-            end)
-        end
-    end)
-    
-    table.insert(connections, connection)
-    return connections
-end
-
-for attackName, config in pairs(ATTACK_CONFIG) do
-    bindMainAttackReplacement(attackName, config)
-end
-
-for originalAnim, data in pairs(ADDITIONAL_REPLACEMENTS) do
+local function bindReplacement(animationId, replacementId, speed, timePos, soundId, useFOV, useRedLight, useBlackFlashText)
     humanoid.AnimationPlayed:Connect(function(animationTrack)
-        local trackId = tonumber(animationTrack.Animation.AnimationId:match("%d+"))
-        
-        if trackId == originalAnim then
-            if processedAnimations[originalAnim] and tick() - processedAnimations[originalAnim] < 0.1 then
-                return
+        if animationTrack.Animation.AnimationId == "rbxassetid://" .. animationId then
+            task.wait()
+            
+            for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+                if track.Animation.AnimationId == "rbxassetid://" .. animationId then
+                    track:Stop()
+                end
             end
             
-            processedAnimations[originalAnim] = tick()
+            local AnimAnim = Instance.new("Animation")
+            AnimAnim.AnimationId = "rbxassetid://" .. replacementId
+            local Anim = humanoid:LoadAnimation(AnimAnim)
+            Anim:Play()
+            Anim:AdjustSpeed(0)
+            Anim.TimePosition = timePos or 0
+            Anim:AdjustSpeed(speed or 1)
             
-            task.spawn(function()
-                task.wait(0.05)
-                
-                for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-                    local id = tonumber(track.Animation.AnimationId:match("%d+"))
-                    if id == originalAnim then
-                        track:Stop(0)
-                    end
+            if soundId then
+                local hrp = character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    local sound = Instance.new("Sound")
+                    sound.SoundId = "rbxassetid://" .. soundId
+                    sound.Volume = 1
+                    sound.Parent = hrp
+                    sound:Play()
+                    game.Debris:AddItem(sound, 5)
                 end
+            end
+            
+            if useFOV then
+                local camera = workspace.CurrentCamera
+                local originalFOV = camera.FieldOfView
                 
-                local AnimAnim = Instance.new("Animation")
-                AnimAnim.AnimationId = "rbxassetid://" .. data.animationId
-                local Anim = humanoid:LoadAnimation(AnimAnim)
-                Anim:Play(0.1, 1, 0)
-                Anim:AdjustSpeed(data.speed or 1)
-            end)
+                local fovIncrease = game:GetService("TweenService"):Create(
+                    camera,
+                    TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {FieldOfView = originalFOV + 20}
+                )
+                fovIncrease:Play()
+                
+                task.wait(0.3)
+                
+                local fovDecrease = game:GetService("TweenService"):Create(
+                    camera,
+                    TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+                    {FieldOfView = originalFOV}
+                )
+                fovDecrease:Play()
+            end
+            
+            if useRedLight then
+                local Lighting = game:GetService("Lighting")
+                local TweenService = game:GetService("TweenService")
+                
+                local originalAmbient = Lighting.Ambient
+                local originalBrightness = Lighting.Brightness
+                
+                local lightTween = TweenService:Create(
+                    Lighting,
+                    TweenInfo.new(0.5, Enum.EasingStyle.Cubic, Enum.EasingDirection.InOut),
+                    {
+                        Ambient = Color3.new(0.4, 0.05, 0.05),
+                        Brightness = 1
+                    }
+                )
+                lightTween:Play()
+                
+                task.wait(0.5)
+                
+                local lightReturn = TweenService:Create(
+                    Lighting,
+                    TweenInfo.new(0.5, Enum.EasingStyle.Cubic, Enum.EasingDirection.InOut),
+                    {
+                        Ambient = originalAmbient,
+                        Brightness = originalBrightness
+                    }
+                )
+                lightReturn:Play()
+            end
+            
+            if useBlackFlashText then
+                coroutine.wrap(createBlackFlashNotification)()
+            end
         end
     end)
 end
+
+bindReplacement(10468665991, 17186602996, 1, nil, 75307432501177, true, true, true)
+bindReplacement(10466974800, 13560306510, 3)
+bindReplacement(10471336737, 18179181663, 1, nil, nil, true, false, false)
+bindReplacement(12510170988, 18897119503, 1)
+bindReplacement(11343318134, 18450698238, 1)
+bindReplacement(11365563255, 17861840167, 0.3)
+bindReplacement(13927612951, 18459220516, 1)
+bindReplacement(15955393872, 18459220516, 1)
+bindReplacement(12983333733, 120001337057214, 0.55)
+bindReplacement(12447707844, 106128760138039, 1)
+bindReplacement(10479335397, 132259592388175, 1)
+bindReplacement(10503381238, 14900168720, 1)
+bindReplacement(10470104242, 17858997926, 1.1)
+
+local animationIdsToStop = {
+    [17859015788] = true,
+    [10469493270] = true,
+    [10469630950] = true,
+    [10469639222] = true,
+    [10469643643] = true
+}
+
+local replacementAnimations = {
+    ["10469493270"] = "rbxassetid://13491635433",
+    ["10469630950"] = "rbxassetid://13532600125",
+    ["10469639222"] = "rbxassetid://104895379416342",
+    ["10469643643"] = "rbxassetid://18181348446",
+    ["17859015788"] = "rbxassetid://12684185971",
+    ["11365563255"] = "rbxassetid://14516273501"
+}
+
+local queue, isAnimating = {}, false
 
 local function playReplacementAnimation(animationId)
     if isAnimating then
         table.insert(queue, animationId)
         return
     end
-    
     isAnimating = true
     local replacementAnimationId = replacementAnimations[tostring(animationId)]
-    
     if replacementAnimationId then
         local AnimAnim = Instance.new("Animation")
         AnimAnim.AnimationId = replacementAnimationId
         local Anim = humanoid:LoadAnimation(AnimAnim)
         Anim:Play()
-        
         Anim.Stopped:Connect(function()
             isAnimating = false
             if #queue > 0 then
@@ -716,9 +574,7 @@ end
 local function stopSpecificAnimations()
     for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
         local animationId = tonumber(track.Animation.AnimationId:match("%d+"))
-        if animationIdsToStop[animationId] then 
-            track:Stop()
-        end
+        if animationIdsToStop[animationId] then track:Stop() end
     end
 end
 
@@ -733,6 +589,8 @@ end
 
 humanoid.AnimationPlayed:Connect(onAnimationPlayed)
 
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
 local function onBodyVelocityAdded(bodyVelocity)
     if bodyVelocity:IsA("BodyVelocity") then
         bodyVelocity.Velocity = Vector3.new(bodyVelocity.Velocity.X, 0, bodyVelocity.Velocity.Z)
@@ -740,61 +598,19 @@ local function onBodyVelocityAdded(bodyVelocity)
 end
 
 character.DescendantAdded:Connect(onBodyVelocityAdded)
-for _, descendant in pairs(character:GetDescendants()) do 
-    onBodyVelocityAdded(descendant)
-end
+for _, descendant in pairs(character:GetDescendants()) do onBodyVelocityAdded(descendant) end
 
 player.CharacterAdded:Connect(function(newCharacter)
     character = newCharacter
     humanoid = character:WaitForChild("Humanoid")
-    hrp = character:WaitForChild("HumanoidRootPart")
-    isAlive = true
-    hotbarCache = {}
-    currentlyPlayingCustom = {}
-    processedAnimations = {}
-    lastSoundTime = {}
-    cleanupTweens()
-    
+    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
     character.DescendantAdded:Connect(onBodyVelocityAdded)
-    for _, descendant in pairs(character:GetDescendants()) do 
-        onBodyVelocityAdded(descendant)
-    end
-    
-    humanoid.AnimationPlayed:Connect(onAnimationPlayed)
-    
-    for attackName, config in pairs(ATTACK_CONFIG) do
-        bindMainAttackReplacement(attackName, config)
-    end
-    
-    for originalAnim, data in pairs(ADDITIONAL_REPLACEMENTS) do
-        humanoid.AnimationPlayed:Connect(function(animationTrack)
-            local trackId = tonumber(animationTrack.Animation.AnimationId:match("%d+"))
-            
-            if trackId == originalAnim then
-                if processedAnimations[originalAnim] and tick() - processedAnimations[originalAnim] < 0.1 then
-                    return
-                end
-                
-                processedAnimations[originalAnim] = tick()
-                
-                task.spawn(function()
-                    task.wait(0.05)
-                    
-                    for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-                        local id = tonumber(track.Animation.AnimationId:match("%d+"))
-                        if id == originalAnim then
-                            track:Stop(0)
-                        end
-                    end
-                    
-                    local AnimAnim = Instance.new("Animation")
-                    AnimAnim.AnimationId = "rbxassetid://" .. data.animationId
-                    local Anim = humanoid:LoadAnimation(AnimAnim)
-                    Anim:Play(0.1, 1, 0)
-                    Anim:AdjustSpeed(data.speed or 1)
-                end)
-            end
-        end)
-    end
-    
-    task.wait(0
+    for _, descendant in pairs(character:GetDescendants()) do onBodyVelocityAdded(descendant) end
+end)
+
+setupClickHandlers()
+coroutine.wrap(N1)()
+coroutine.wrap(N2)()
+
+task.wait(1)
+showWelcomeMessage()
