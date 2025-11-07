@@ -98,6 +98,8 @@ local hotbarCache = {}
 local isAlive = true
 local currentlyPlayingCustom = {}
 local activeTweens = {}
+local processedAnimations = {}
+local lastSoundTime = {}
 
 local t1 = {}
 local t2 = {
@@ -187,9 +189,9 @@ local function addCursedFireTo(buttonBase)
         for _, desc in pairs(clone:GetDescendants()) do
             if desc:IsA("ParticleEmitter") then
                 desc.Color = ColorSequence.new({
-                    ColorSequenceKeypoint.new(0, Color3.fromRGB(100, 0, 0)),
-                    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 0, 0)),
-                    ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 0, 0))
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 0, 0)),
+                    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(140, 0, 0)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 0, 0))
                 })
             end
         end
@@ -303,106 +305,71 @@ local function createBlackFlashNotification()
     if not frame then
         frame = Instance.new("Frame")
         frame.Name = "Frame"
-        frame.Size = UDim2.new(0.35, 0, 0.8, 0)
-        frame.Position = UDim2.new(0.325, 0, 0.1, 0)
+        frame.Size = UDim2.new(0.3, 0, 0.8, 0)
+        frame.Position = UDim2.new(0.35, 0, 0.1, 0)
         frame.BackgroundTransparency = 1
         frame.Parent = screenGui
         
         local listLayout = Instance.new("UIListLayout")
         listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        listLayout.Padding = UDim.new(0, 8)
+        listLayout.Padding = UDim.new(0, 5)
         listLayout.Parent = frame
     end
     
     local sound = Instance.new("Sound")
     sound.SoundId = "rbxassetid://9086333748"
-    sound.Volume = 0.6
+    sound.Volume = 0.5
     sound.Parent = frame
     sound:Play()
-    Debris:AddItem(sound, 3)
-    
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, 0, 0, 50)
-    container.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-    container.BackgroundTransparency = 0.3
-    container.BorderSizePixel = 0
-    container.Parent = frame
-    
-    local uiCorner = Instance.new("UICorner")
-    uiCorner.CornerRadius = UDim.new(0, 12)
-    uiCorner.Parent = container
-    
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(150, 0, 0)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
-    })
-    gradient.Rotation = 90
-    gradient.Parent = container
+    Debris:AddItem(sound, 2)
     
     local message = Instance.new("TextLabel")
-    message.Text = "⚡ BLACK FLASH ⚡"
+    message.Text = "BLACK FLASH"
     message.Font = Enum.Font.GothamBold
-    message.TextSize = 28
+    message.TextSize = 24
     message.TextColor3 = Color3.fromRGB(255, 255, 255)
-    message.TextStrokeTransparency = 0.3
-    message.TextStrokeColor3 = Color3.fromRGB(255, 50, 50)
+    message.TextStrokeTransparency = 0.5
+    message.TextStrokeColor3 = Color3.fromRGB(255, 0, 0)
     message.BackgroundTransparency = 1
-    message.Size = UDim2.new(1, 0, 1, 0)
-    message.Parent = container
+    message.BorderSizePixel = 0
+    message.Size = UDim2.new(1, 0, 0, 40)
+    message.TextScaled = false
+    message.Parent = frame
     
     local stroke = Instance.new("UIStroke")
     stroke.Color = Color3.fromRGB(255, 0, 0)
-    stroke.Thickness = 3
+    stroke.Thickness = 2
     stroke.Transparency = 0
     stroke.Parent = message
     
-    container.Size = UDim2.new(0, 0, 0, 50)
-    container.AnchorPoint = Vector2.new(0.5, 0)
-    container.Position = UDim2.new(0.5, 0, 0, 0)
+    local origSize = message.TextSize
+    message.TextSize = 0
     
-    local expandTween = registerTween(TweenService:Create(
-        container,
-        TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-        {Size = UDim2.new(1, 0, 0, 50), Position = UDim2.new(0, 0, 0, 0)}
-    ))
-    expandTween:Play()
+    local tweenIn = TweenService:Create(
+        message,
+        TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        {TextSize = origSize}
+    )
+    tweenIn:Play()
     
-    local pulseTween = registerTween(TweenService:Create(
+    local pulseTween = TweenService:Create(
         stroke,
-        TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-        {Transparency = 0.6, Thickness = 4}
-    ))
+        TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+        {Transparency = 0.5}
+    )
     pulseTween:Play()
     
-    local glowTween = registerTween(TweenService:Create(
-        gradient,
-        TweenInfo.new(0.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false),
-        {Rotation = 270}
-    ))
-    glowTween:Play()
-    
-    task.delay(2.5, function()
+    task.delay(2, function()
         pulseTween:Cancel()
-        glowTween:Cancel()
         
-        local shrinkTween = registerTween(TweenService:Create(
-            container,
-            TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-            {Size = UDim2.new(0, 0, 0, 50), BackgroundTransparency = 1}
-        ))
-        
-        local fadeTween = registerTween(TweenService:Create(
+        local tweenOut = TweenService:Create(
             message,
-            TweenInfo.new(0.25, Enum.EasingStyle.Linear),
-            {TextTransparency = 1}
-        ))
+            TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+            {TextSize = 0}
+        )
+        tweenOut:Play()
         
-        shrinkTween:Play()
-        fadeTween:Play()
-        
-        Debris:AddItem(container, 0.3)
+        Debris:AddItem(message, 0.3)
     end)
 end
 
@@ -413,145 +380,173 @@ local function showWelcomeMessage()
     screenGui.ResetOnSpawn = false
     screenGui.Parent = playerGui
     
-    local blur = Instance.new("Frame")
-    blur.Size = UDim2.new(1, 0, 1, 0)
-    blur.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    blur.BackgroundTransparency = 1
-    blur.BorderSizePixel = 0
-    blur.Parent = screenGui
-    
-    local blurTween = registerTween(TweenService:Create(
-        blur,
-        TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = 0.5}
-    ))
-    blurTween:Play()
-    
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(0.7, 0, 0.25, 0)
-    container.Position = UDim2.new(0.15, 0, 0.375, 0)
-    container.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    container.BackgroundTransparency = 0.2
-    container.BorderSizePixel = 0
-    container.Parent = screenGui
-    
-    local containerCorner = Instance.new("UICorner")
-    containerCorner.CornerRadius = UDim.new(0, 20)
-    containerCorner.Parent = container
-    
-    local containerStroke = Instance.new("UIStroke")
-    containerStroke.Color = Color3.fromRGB(255, 255, 255)
-    containerStroke.Thickness = 2
-    containerStroke.Transparency = 0.5
-    containerStroke.Parent = container
-    
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(100, 100, 255)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(200, 100, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 100, 255))
-    })
-    gradient.Rotation = 45
-    gradient.Parent = container
+    local frame = Instance.new("Frame")
+    frame.Name = "Frame"
+    frame.Size = UDim2.new(0.6, 0, 0.2, 0)
+    frame.Position = UDim2.new(0.2, 0, 0.4, 0)
+    frame.BackgroundTransparency = 1
+    frame.Parent = screenGui
     
     local message = Instance.new("TextLabel")
-    message.Text = "⚡ Script By Golden_seasDeveloper ⚡"
+    message.Text = "Script By Golden_seasDeveloper"
     message.Font = Enum.Font.GothamBold
-    message.TextSize = 36
-    message.TextColor3 = Color3.fromRGB(255, 255, 255)
-    message.TextStrokeTransparency = 0.3
-    message.TextStrokeColor3 = Color3.fromRGB(100, 100, 255)
+    message.TextSize = 32
+    message.TextColor3 = Color3.fromRGB(0, 0, 0)
+    message.TextStrokeTransparency = 0
+    message.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
     message.BackgroundTransparency = 1
-    message.Size = UDim2.new(0.9, 0, 0.6, 0)
-    message.Position = UDim2.new(0.05, 0, 0.2, 0)
+    message.BorderSizePixel = 0
+    message.Size = UDim2.new(0, 0, 0, 0)
+    message.Position = UDim2.new(0.5, 0, 0.5, 0)
+    message.AnchorPoint = Vector2.new(0.5, 0.5)
     message.TextScaled = true
     message.TextTransparency = 1
-    message.Parent = container
+    message.Rotation = -15
+    message.Parent = frame
     
-    local messageStroke = Instance.new("UIStroke")
-    messageStroke.Color = Color3.fromRGB(150, 150, 255)
-    messageStroke.Thickness = 4
-    messageStroke.Transparency = 0
-    messageStroke.Parent = message
+    local uiStroke = Instance.new("UIStroke")
+    uiStroke.Color = Color3.fromRGB(255, 255, 255)
+    uiStroke.Thickness = 4
+    uiStroke.Parent = message
     
-    container.Size = UDim2.new(0, 0, 0, 0)
-    container.Position = UDim2.new(0.5, 0, 0.5, 0)
-    container.AnchorPoint = Vector2.new(0.5, 0.5)
+    local particles = {}
+    for i = 1, 30 do
+        local particle = Instance.new("Frame")
+        particle.Size = UDim2.new(0, math.random(5, 15), 0, math.random(5, 15))
+        particle.Position = UDim2.new(0.5, 0, 0.5, 0)
+        particle.AnchorPoint = Vector2.new(0.5, 0.5)
+        particle.BackgroundColor3 = Color3.fromRGB(math.random(200, 255), math.random(200, 255), math.random(200, 255))
+        particle.BorderSizePixel = 0
+        particle.BackgroundTransparency = 1
+        particle.Parent = screenGui
+        
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = particle
+        
+        table.insert(particles, particle)
+    end
     
-    local expandTween = registerTween(TweenService:Create(
-        container,
+    for _, particle in ipairs(particles) do
+        local angle = math.rad(math.random(0, 360))
+        local distance = math.random(200, 400)
+        local endX = 0.5 + (math.cos(angle) * distance / screenGui.AbsoluteSize.X)
+        local endY = 0.5 + (math.sin(angle) * distance / screenGui.AbsoluteSize.Y)
+        
+        local particleTween = TweenService:Create(
+            particle,
+            TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {
+                Position = UDim2.new(endX, 0, endY, 0),
+                BackgroundTransparency = 0,
+                Rotation = math.random(-180, 180)
+            }
+        )
+        particleTween:Play()
+        
+        task.delay(0.3, function()
+            local fadeOut = TweenService:Create(
+                particle,
+                TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+                {BackgroundTransparency = 1}
+            )
+            fadeOut:Play()
+        end)
+    end
+    
+    local expandTween = TweenService:Create(
+        message,
         TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-        {Size = UDim2.new(0.7, 0, 0.25, 0)}
-    ))
+        {
+            Size = UDim2.new(1, 0, 1, 0),
+            TextTransparency = 0,
+            Rotation = 0
+        }
+    )
     expandTween:Play()
     
-    task.wait(0.3)
+    task.wait(0.5)
+    setupClickHandlers()
+end)
+
+humanoid.Died:Connect(function()
+    isAlive = false
+    queue = {}
+    isAnimating = false
+    currentlyPlayingCustom = {}
+    processedAnimations = {}
+    lastSoundTime = {}
+    cleanupTweens()
+end)
+
+setupClickHandlers()
+task.wait(1)
+showWelcomeMessage().3)
     
-    local fadeTween = registerTween(TweenService:Create(
+    local shakeDuration = 0.4
+    local shakeIntensity = 5
+    local shakeCount = 10
+    for i = 1, shakeCount do
+        local offsetX = math.random(-shakeIntensity, shakeIntensity)
+        local offsetY = math.random(-shakeIntensity, shakeIntensity)
+        message.Position = UDim2.new(0.5, offsetX, 0.5, offsetY)
+        task.wait(shakeDuration / shakeCount)
+    end
+    message.Position = UDim2.new(0.5, 0, 0.5, 0)
+    
+    local pulseTween = TweenService:Create(
         message,
-        TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {TextTransparency = 0}
-    ))
-    fadeTween:Play()
-    
-    local glowTween = registerTween(TweenService:Create(
-        gradient,
-        TweenInfo.new(2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false),
-        {Rotation = 405}
-    ))
-    glowTween:Play()
-    
-    local pulseTween = registerTween(TweenService:Create(
-        messageStroke,
-        TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-        {Thickness = 6, Transparency = 0.4}
-    ))
+        TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 4, true),
+        {TextSize = 36}
+    )
     pulseTween:Play()
     
-    task.wait(3)
+    task.wait(2.5)
     
-    glowTween:Cancel()
     pulseTween:Cancel()
     
-    local fadeOutTween = registerTween(TweenService:Create(
-        container,
-        TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-        {Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1}
-    ))
-    
-    local messageOutTween = registerTween(TweenService:Create(
+    local rotateTween = TweenService:Create(
         message,
-        TweenInfo.new(0.5, Enum.EasingStyle.Quad),
-        {TextTransparency = 1}
-    ))
+        TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+        {
+            Rotation = 15,
+            Size = UDim2.new(0, 0, 0, 0),
+            TextTransparency = 1
+        }
+    )
+    rotateTween:Play()
     
-    local blurOutTween = registerTween(TweenService:Create(
-        blur,
-        TweenInfo.new(0.5, Enum.EasingStyle.Quad),
-        {BackgroundTransparency = 1}
-    ))
-    
-    fadeOutTween:Play()
-    messageOutTween:Play()
-    blurOutTween:Play()
-    
-    task.wait(0.6)
+    task.wait(0.4)
     screenGui:Destroy()
 end
 
 local function bindMainAttackReplacement(attackName, config)
-    humanoid.AnimationPlayed:Connect(function(animationTrack)
+    local connections = {}
+    
+    local connection = humanoid.AnimationPlayed:Connect(function(animationTrack)
         local trackId = tonumber(animationTrack.Animation.AnimationId:match("%d+"))
         
         if trackId == config.originalAnimId then
+            local animKey = config.originalAnimId .. "_" .. tick()
+            
+            if processedAnimations[config.originalAnimId] and tick() - processedAnimations[config.originalAnimId] < 0.1 then
+                return
+            end
+            
+            processedAnimations[config.originalAnimId] = tick()
+            
             task.spawn(function()
-                task.wait(0.03)
+                task.wait(0.05)
                 
                 for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
                     local id = tonumber(track.Animation.AnimationId:match("%d+"))
-                    if id == config.originalAnimId then
+                    if id == config.originalAnimId and track ~= animationTrack then
                         track:Stop(0)
                     end
+                end
+                
+                if currentlyPlayingCustom[config.replacementAnimId] then
+                    return
                 end
                 
                 local AnimAnim = Instance.new("Animation")
@@ -560,7 +555,7 @@ local function bindMainAttackReplacement(attackName, config)
                 
                 currentlyPlayingCustom[config.replacementAnimId] = true
                 
-                Anim:Play(0.08, 1, 0)
+                Anim:Play(0.1, 1, 0)
                 Anim:AdjustSpeed(0)
                 Anim.TimePosition = config.timePos or 0
                 Anim:AdjustSpeed(config.speed or 1)
@@ -570,12 +565,25 @@ local function bindMainAttackReplacement(attackName, config)
                 end)
                 
                 if config.soundId and hrp then
-                    local sound = Instance.new("Sound")
-                    sound.SoundId = "rbxassetid://" .. config.soundId
-                    sound.Volume = 1.2
-                    sound.Parent = hrp
-                    sound:Play()
-                    Debris:AddItem(sound, 5)
+                    local soundKey = tostring(config.soundId)
+                    local currentTime = tick()
+                    
+                    if not lastSoundTime[soundKey] or currentTime - lastSoundTime[soundKey] > 0.3 then
+                        lastSoundTime[soundKey] = currentTime
+                        
+                        for _, child in pairs(hrp:GetChildren()) do
+                            if child:IsA("Sound") and child.SoundId == "rbxassetid://" .. config.soundId then
+                                child:Destroy()
+                            end
+                        end
+                        
+                        local sound = Instance.new("Sound")
+                        sound.SoundId = "rbxassetid://" .. config.soundId
+                        sound.Volume = 1
+                        sound.Parent = hrp
+                        sound:Play()
+                        Debris:AddItem(sound, 5)
+                    end
                 end
                 
                 if config.useFOV then
@@ -585,16 +593,16 @@ local function bindMainAttackReplacement(attackName, config)
                         
                         local fovIncrease = registerTween(TweenService:Create(
                             camera,
-                            TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {FieldOfView = originalFOV + 25}
+                            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {FieldOfView = originalFOV + 20}
                         ))
                         fovIncrease:Play()
                         
-                        task.wait(0.25)
+                        task.wait(0.3)
                         
                         local fovDecrease = registerTween(TweenService:Create(
                             camera,
-                            TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+                            TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
                             {FieldOfView = originalFOV}
                         ))
                         fovDecrease:Play()
@@ -607,15 +615,13 @@ local function bindMainAttackReplacement(attackName, config)
                         
                         local originalAmbient = Lighting.Ambient
                         local originalBrightness = Lighting.Brightness
-                        local originalOutdoorAmbient = Lighting.OutdoorAmbient
                         
                         local lightTween = registerTween(TweenService:Create(
                             Lighting,
-                            TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            TweenInfo.new(0.5, Enum.EasingStyle.Cubic, Enum.EasingDirection.InOut),
                             {
-                                Ambient = Color3.new(0.5, 0.05, 0.05),
-                                OutdoorAmbient = Color3.new(0.3, 0.02, 0.02),
-                                Brightness = 1.5
+                                Ambient = Color3.new(0.4, 0.05, 0.05),
+                                Brightness = 1
                             }
                         ))
                         lightTween:Play()
@@ -624,10 +630,9 @@ local function bindMainAttackReplacement(attackName, config)
                         
                         local lightReturn = registerTween(TweenService:Create(
                             Lighting,
-                            TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+                            TweenInfo.new(0.5, Enum.EasingStyle.Cubic, Enum.EasingDirection.InOut),
                             {
                                 Ambient = originalAmbient,
-                                OutdoorAmbient = originalOutdoorAmbient,
                                 Brightness = originalBrightness
                             }
                         ))
@@ -641,6 +646,9 @@ local function bindMainAttackReplacement(attackName, config)
             end)
         end
     end)
+    
+    table.insert(connections, connection)
+    return connections
 end
 
 for attackName, config in pairs(ATTACK_CONFIG) do
@@ -652,8 +660,14 @@ for originalAnim, data in pairs(ADDITIONAL_REPLACEMENTS) do
         local trackId = tonumber(animationTrack.Animation.AnimationId:match("%d+"))
         
         if trackId == originalAnim then
+            if processedAnimations[originalAnim] and tick() - processedAnimations[originalAnim] < 0.1 then
+                return
+            end
+            
+            processedAnimations[originalAnim] = tick()
+            
             task.spawn(function()
-                task.wait(0.03)
+                task.wait(0.05)
                 
                 for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
                     local id = tonumber(track.Animation.AnimationId:match("%d+"))
@@ -665,7 +679,7 @@ for originalAnim, data in pairs(ADDITIONAL_REPLACEMENTS) do
                 local AnimAnim = Instance.new("Animation")
                 AnimAnim.AnimationId = "rbxassetid://" .. data.animationId
                 local Anim = humanoid:LoadAnimation(AnimAnim)
-                Anim:Play(0.08, 1, 0)
+                Anim:Play(0.1, 1, 0)
                 Anim:AdjustSpeed(data.speed or 1)
             end)
         end
@@ -685,7 +699,7 @@ local function playReplacementAnimation(animationId)
         local AnimAnim = Instance.new("Animation")
         AnimAnim.AnimationId = replacementAnimationId
         local Anim = humanoid:LoadAnimation(AnimAnim)
-        Anim:Play(0.1, 1, 0)
+        Anim:Play()
         
         Anim.Stopped:Connect(function()
             isAnimating = false
@@ -703,7 +717,7 @@ local function stopSpecificAnimations()
     for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
         local animationId = tonumber(track.Animation.AnimationId:match("%d+"))
         if animationIdsToStop[animationId] then 
-            track:Stop(0)
+            track:Stop()
         end
     end
 end
@@ -712,7 +726,7 @@ local function onAnimationPlayed(animationTrack)
     local animationId = tonumber(animationTrack.Animation.AnimationId:match("%d+"))
     if animationIdsToStop[animationId] then
         stopSpecificAnimations()
-        animationTrack:Stop(0)
+        animationTrack:Stop()
         playReplacementAnimation(animationId)
     end
 end
@@ -727,7 +741,7 @@ end
 
 character.DescendantAdded:Connect(onBodyVelocityAdded)
 for _, descendant in pairs(character:GetDescendants()) do 
-    onBodyVelocityAdded(descendant) 
+    onBodyVelocityAdded(descendant)
 end
 
 player.CharacterAdded:Connect(function(newCharacter)
@@ -737,11 +751,13 @@ player.CharacterAdded:Connect(function(newCharacter)
     isAlive = true
     hotbarCache = {}
     currentlyPlayingCustom = {}
+    processedAnimations = {}
+    lastSoundTime = {}
     cleanupTweens()
     
     character.DescendantAdded:Connect(onBodyVelocityAdded)
     for _, descendant in pairs(character:GetDescendants()) do 
-        onBodyVelocityAdded(descendant) 
+        onBodyVelocityAdded(descendant)
     end
     
     humanoid.AnimationPlayed:Connect(onAnimationPlayed)
@@ -755,8 +771,14 @@ player.CharacterAdded:Connect(function(newCharacter)
             local trackId = tonumber(animationTrack.Animation.AnimationId:match("%d+"))
             
             if trackId == originalAnim then
+                if processedAnimations[originalAnim] and tick() - processedAnimations[originalAnim] < 0.1 then
+                    return
+                end
+                
+                processedAnimations[originalAnim] = tick()
+                
                 task.spawn(function()
-                    task.wait(0.03)
+                    task.wait(0.05)
                     
                     for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
                         local id = tonumber(track.Animation.AnimationId:match("%d+"))
@@ -768,24 +790,11 @@ player.CharacterAdded:Connect(function(newCharacter)
                     local AnimAnim = Instance.new("Animation")
                     AnimAnim.AnimationId = "rbxassetid://" .. data.animationId
                     local Anim = humanoid:LoadAnimation(AnimAnim)
-                    Anim:Play(0.08, 1, 0)
+                    Anim:Play(0.1, 1, 0)
                     Anim:AdjustSpeed(data.speed or 1)
                 end)
             end
         end)
     end
     
-    task.wait(0.5)
-    setupClickHandlers()
-end)
-
-humanoid.Died:Connect(function()
-    isAlive = false
-    queue = {}
-    isAnimating = false
-    currentlyPlayingCustom = {}
-    cleanupTweens()
-end)
-setupClickHandlers()
-task.wait(1)
-showWelcomeMessage()
+    task.wait(0
