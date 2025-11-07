@@ -31,7 +31,7 @@ local ATTACK_CONFIG = {
     },
     ["Uppercut"] = {
         newName = "Divergent Punch",
-        animationId = 18179181663,
+        animationId = 16944265635,
         speed = 1,
         timePos = 0,
         soundId = nil,
