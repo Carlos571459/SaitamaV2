@@ -1,7 +1,7 @@
 local ATTACK_CONFIG = {
     ["Normal Punch"] = {
         newName = "Black Flash",
-        animationId = 17186602996,
+        animationId = 15955393872,
         speed = 1,
         timePos = 0,
         soundId = 75307432501177,
