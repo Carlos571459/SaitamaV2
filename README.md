@@ -13,6 +13,7 @@ local fontConfig = {
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
 
 local t1 = {
     ["1"] = {original = og1, new = mn1},
@@ -89,9 +90,7 @@ local function setupClickHandlers()
         local baseButton = button and button:FindFirstChild("Base")
         if baseButton then
             local buttonGui = baseButton:FindFirstChild("Button") or baseButton:FindFirstChildOfClass("GuiButton")
-            local toolName = baseButton:FindFirstChild("ToolName")
-
-            if buttonGui and toolName then
+            if buttonGui then
                 buttonGui.MouseButton1Click:Connect(function()
                     removeAllCursedFire()
                 end)
@@ -159,19 +158,7 @@ local function N2()
     end
 end
 
-setupClickHandlers()
-coroutine.wrap(N1)()
-coroutine.wrap(N2)()
-
--- Mostra mensagem de boas-vindas ao entrar no jogo
-task.wait(1)
-showWelcomeMessage()
-
 local function createBlackFlashNotification()
-    local player = game.Players.LocalPlayer
-    local playerGui = player:WaitForChild("PlayerGui")
-    
-    -- Cria o ScreenGui se não existir
     local screenGui = playerGui:FindFirstChild("BlackFlashNotifications")
     if not screenGui then
         screenGui = Instance.new("ScreenGui")
@@ -180,7 +167,6 @@ local function createBlackFlashNotification()
         screenGui.Parent = playerGui
     end
     
-    -- Cria o Frame container se não existir
     local frame = screenGui:FindFirstChild("Frame")
     if not frame then
         frame = Instance.new("Frame")
@@ -196,7 +182,6 @@ local function createBlackFlashNotification()
         listLayout.Parent = frame
     end
     
-    -- Cria o som de notificação
     local sound = Instance.new("Sound")
     sound.SoundId = "rbxassetid://9086333748"
     sound.Volume = 0.5
@@ -204,7 +189,6 @@ local function createBlackFlashNotification()
     sound:Play()
     game.Debris:AddItem(sound, 2)
     
-    -- Cria a mensagem SEM BACKGROUND
     local message = Instance.new("TextLabel")
     message.Text = "BLACK FLASH"
     message.Font = Enum.Font.GothamBold
@@ -212,20 +196,18 @@ local function createBlackFlashNotification()
     message.TextColor3 = Color3.fromRGB(255, 255, 255)
     message.TextStrokeTransparency = 0.5
     message.TextStrokeColor3 = Color3.fromRGB(255, 0, 0)
-    message.BackgroundTransparency = 1  -- SEM BACKGROUND
+    message.BackgroundTransparency = 1
     message.BorderSizePixel = 0
     message.Size = UDim2.new(1, 0, 0, 40)
     message.TextScaled = false
     message.Parent = frame
     
-    -- Adiciona brilho vermelho
     local stroke = Instance.new("UIStroke")
     stroke.Color = Color3.fromRGB(255, 0, 0)
     stroke.Thickness = 2
     stroke.Transparency = 0
     stroke.Parent = message
     
-    -- Animação de entrada (crescendo)
     local origSize = message.TextSize
     message.TextSize = 0
     
@@ -236,7 +218,6 @@ local function createBlackFlashNotification()
     )
     tweenIn:Play()
     
-    -- Efeito de pulso no stroke
     local pulseTween = game:GetService("TweenService"):Create(
         stroke,
         TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
@@ -244,12 +225,10 @@ local function createBlackFlashNotification()
     )
     pulseTween:Play()
     
-    -- Aguarda e remove
     task.wait(2)
     
     pulseTween:Cancel()
     
-    -- Animação de saída (diminuindo até sumir)
     local tweenOut = game:GetService("TweenService"):Create(
         message,
         TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.In),
@@ -261,16 +240,11 @@ local function createBlackFlashNotification()
 end
 
 local function showWelcomeMessage()
-    local player = game.Players.LocalPlayer
-    local playerGui = player:WaitForChild("PlayerGui")
-    
-    -- Cria o ScreenGui
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "WelcomeMessage"
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     screenGui.Parent = playerGui
     
-    -- Cria o Frame container
     local frame = Instance.new("Frame")
     frame.Name = "Frame"
     frame.Size = UDim2.new(0.4, 0, 0.15, 0)
@@ -278,7 +252,6 @@ local function showWelcomeMessage()
     frame.BackgroundTransparency = 1
     frame.Parent = screenGui
     
-    -- Cria a mensagem
     local message = Instance.new("TextLabel")
     message.Text = "Script By Golden_seasDeveloper"
     message.Font = Enum.Font.GothamBold
@@ -292,14 +265,12 @@ local function showWelcomeMessage()
     message.TextScaled = true
     message.Parent = frame
     
-    -- Adiciona brilho dourado
     local stroke = Instance.new("UIStroke")
     stroke.Color = Color3.fromRGB(255, 215, 0)
     stroke.Thickness = 2
     stroke.Transparency = 0
     stroke.Parent = message
     
-    -- Animação de entrada (crescendo do centro)
     message.TextTransparency = 1
     stroke.Transparency = 1
     
@@ -318,7 +289,6 @@ local function showWelcomeMessage()
     tweenIn:Play()
     strokeIn:Play()
     
-    -- Efeito de pulso
     task.wait(0.5)
     local pulseTween = game:GetService("TweenService"):Create(
         stroke,
@@ -327,12 +297,10 @@ local function showWelcomeMessage()
     )
     pulseTween:Play()
     
-    -- Aguarda e remove
     task.wait(3)
     
     pulseTween:Cancel()
     
-    -- Animação de saída (diminuindo)
     local tweenOut = game:GetService("TweenService"):Create(
         message,
         TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In),
@@ -352,92 +320,25 @@ local function showWelcomeMessage()
     screenGui:Destroy()
 end
 
-local function createBlackFlashEffect()
-    local player = game.Players.LocalPlayer
-    local playerGui = player:WaitForChild("PlayerGui")
-    
-    -- Cria a tela de efeito
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "BlackFlashEffect"
-    screenGui.Parent = playerGui
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    
-    -- Fundo vermelho
-    local background = Instance.new("Frame")
-    background.Size = UDim2.new(1, 0, 1, 0)
-    background.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    background.BackgroundTransparency = 1
-    background.Parent = screenGui
-    
-    -- Texto "Black Flash"
-    local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(0.8, 0, 0.3, 0)
-    textLabel.Position = UDim2.new(0.1, 0, 0.35, 0)
-    textLabel.BackgroundTransparency = 1
-    textLabel.Text = "BLACK FLASH"
-    textLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-    textLabel.TextStrokeTransparency = 0
-    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    textLabel.Font = Enum.Font.GothamBold
-    textLabel.TextScaled = true
-    textLabel.TextTransparency = 1
-    textLabel.Parent = screenGui
-    
-    -- Animação do fundo
-    local bgTween = game:GetService("TweenService"):Create(
-        background,
-        TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = 0.7}
-    )
-    bgTween:Play()
-    
-    task.wait(0.1)
-    
-    local bgFade = game:GetService("TweenService"):Create(
-        background,
-        TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-        {BackgroundTransparency = 1}
-    )
-    bgFade:Play()
-    
-    -- Animação do texto
-    local textAppear = game:GetService("TweenService"):Create(
-        textLabel,
-        TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-        {TextTransparency = 0, Size = UDim2.new(1, 0, 0.4, 0), Position = UDim2.new(0, 0, 0.3, 0)}
-    )
-    textAppear:Play()
-    
-    task.wait(0.5)
-    
-    local textFade = game:GetService("TweenService"):Create(
-        textLabel,
-        TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-        {TextTransparency = 1}
-    )
-    textFade:Play()
-    
-    task.wait(0.3)
-    screenGui:Destroy()
-end
-
 local function bindReplacement(animationId, replacementId, speed, timePos, soundId, useFOV, useRedLight, useBlackFlashText)
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoid = character:WaitForChild("Humanoid")
     humanoid.AnimationPlayed:Connect(function(animationTrack)
         if animationTrack.Animation.AnimationId == "rbxassetid://" .. animationId then
-            local Humanoid = player.Character:WaitForChild("Humanoid")
-            for _, animTrack in pairs(Humanoid:GetPlayingAnimationTracks()) do animTrack:Stop() end
+            task.wait()
+            
+            for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+                if track.Animation.AnimationId == "rbxassetid://" .. animationId then
+                    track:Stop()
+                end
+            end
+            
             local AnimAnim = Instance.new("Animation")
             AnimAnim.AnimationId = "rbxassetid://" .. replacementId
-            local Anim = Humanoid:LoadAnimation(AnimAnim)
+            local Anim = humanoid:LoadAnimation(AnimAnim)
             Anim:Play()
             Anim:AdjustSpeed(0)
             Anim.TimePosition = timePos or 0
             Anim:AdjustSpeed(speed or 1)
             
-            -- Toca o som se fornecido
             if soundId then
                 local hrp = character:FindFirstChild("HumanoidRootPart")
                 if hrp then
@@ -450,12 +351,10 @@ local function bindReplacement(animationId, replacementId, speed, timePos, sound
                 end
             end
             
-            -- Efeito de FOV
             if useFOV then
                 local camera = workspace.CurrentCamera
                 local originalFOV = camera.FieldOfView
                 
-                -- Aumenta o FOV
                 local fovIncrease = game:GetService("TweenService"):Create(
                     camera,
                     TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -465,7 +364,6 @@ local function bindReplacement(animationId, replacementId, speed, timePos, sound
                 
                 task.wait(0.3)
                 
-                -- Volta ao FOV normal
                 local fovDecrease = game:GetService("TweenService"):Create(
                     camera,
                     TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
@@ -474,27 +372,23 @@ local function bindReplacement(animationId, replacementId, speed, timePos, sound
                 fovDecrease:Play()
             end
             
-            -- Luz vermelha (iluminação ambiente)
             if useRedLight then
                 local Lighting = game:GetService("Lighting")
                 local TweenService = game:GetService("TweenService")
                 
-                -- Salva a iluminação original
                 local originalAmbient = Lighting.Ambient
                 local originalBrightness = Lighting.Brightness
                 
-                -- Cria iluminação vermelha suave
                 local lightTween = TweenService:Create(
                     Lighting,
                     TweenInfo.new(0.5, Enum.EasingStyle.Cubic, Enum.EasingDirection.InOut),
                     {
-                        Ambient = Color3.new(0.4, 0.05, 0.05), -- Vermelho suave
+                        Ambient = Color3.new(0.4, 0.05, 0.05),
                         Brightness = 1
                     }
                 )
                 lightTween:Play()
                 
-                -- Aguarda e volta ao normal
                 task.wait(0.5)
                 
                 local lightReturn = TweenService:Create(
@@ -508,7 +402,6 @@ local function bindReplacement(animationId, replacementId, speed, timePos, sound
                 lightReturn:Play()
             end
             
-            -- Texto "Black Flash" (notificação estilo do seu código)
             if useBlackFlashText then
                 coroutine.wrap(createBlackFlashNotification)()
             end
@@ -516,12 +409,9 @@ local function bindReplacement(animationId, replacementId, speed, timePos, sound
     end)
 end
 
--- Normal Punch com todos os efeitos
 bindReplacement(10468665991, 17186602996, 1, nil, 75307432501177, true, true, true)
--- Consecutive Punches
 bindReplacement(10466974800, 13560306510, 3)
--- Uppercut com todos os efeitos
-bindReplacement(10471336737, 18182425133, 1, nil, nil, true, true, true)
+bindReplacement(10471336737, 18182425133, 1, nil, nil, true, false, false)
 bindReplacement(12510170988, 18897119503, 1)
 bindReplacement(11343318134, 18450698238, 1)
 bindReplacement(11365563255, 17861840167, 0.3)
@@ -532,11 +422,6 @@ bindReplacement(12447707844, 106128760138039, 1)
 bindReplacement(10479335397, 132259592388175, 1)
 bindReplacement(10503381238, 14900168720, 1)
 bindReplacement(10470104242, 17858997926, 1.1)
-
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
 
 local animationIdsToStop = {
     [17859015788] = true,
@@ -612,7 +497,15 @@ for _, descendant in pairs(character:GetDescendants()) do onBodyVelocityAdded(de
 
 player.CharacterAdded:Connect(function(newCharacter)
     character = newCharacter
+    humanoid = character:WaitForChild("Humanoid")
     humanoidRootPart = character:WaitForChild("HumanoidRootPart")
     character.DescendantAdded:Connect(onBodyVelocityAdded)
     for _, descendant in pairs(character:GetDescendants()) do onBodyVelocityAdded(descendant) end
 end)
+
+setupClickHandlers()
+coroutine.wrap(N1)()
+coroutine.wrap(N2)()
+
+task.wait(1)
+showWelcomeMessage()
