@@ -21,7 +21,7 @@ local ATTACK_CONFIG = {
     },
     ["Shove"] = {
         newName = "Black Flash is expelled",
-        animationId = 18179181663,
+        animationId = 16944265635,
         speed = 1,
         timePos = 0,
         soundId = nil,
